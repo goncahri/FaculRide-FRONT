@@ -9,7 +9,7 @@ import {
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { NgxMaskDirective } from 'ngx-mask';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 @Component({
   selector: 'app-cadastro',
@@ -22,12 +22,16 @@ export class CadastroComponent {
   cadastroForm: FormGroup;
   isMotorista: boolean = false;
   anoAtual = new Date().getFullYear();
-  hoje: string = new Date().toISOString().split('T')[0]; 
+  hoje: string = new Date().toISOString().split('T')[0];
+
+  // ===== NOVO: estado da foto =====
+  selectedFile: File | null = null;
+  previewUrl: string | null = null;
 
   baseURL = window.location.hostname.includes('localhost')
     ? 'http://localhost:3000/api/usuario'
     : 'https://projeto-faculride.onrender.com/api/usuario';
-    
+
   constructor(
     private fb: FormBuilder,
     private router: Router,
@@ -47,7 +51,7 @@ export class CadastroComponent {
       fatec: ['', Validators.required],
       ra: ['', [Validators.required, Validators.pattern(/^\d{13}$/)]],
       genero: ['', Validators.required],
-      dataNascimento: ['', [Validators.required, this.validarDataNascimento]], 
+      dataNascimento: ['', [Validators.required, this.validarDataNascimento]],
       senha: ['', [Validators.required, Validators.minLength(6)]],
       repetirSenha: ['', Validators.required],
       cnh: [''],
@@ -115,6 +119,32 @@ export class CadastroComponent {
       });
   }
 
+  // ===== NOVO: selecionar/remover foto =====
+  onFotoChange(evt: Event) {
+    const input = evt.target as HTMLInputElement;
+    const file = input.files && input.files[0] ? input.files[0] : null;
+    if (!file) return;
+
+    const allow = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allow.includes(file.type)) {
+      alert('Arquivo inválido. Use JPG, PNG ou WEBP.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Arquivo muito grande (máx. 2MB).');
+      return;
+    }
+
+    this.selectedFile = file;
+    this.previewUrl = URL.createObjectURL(file);
+  }
+
+  removerFoto() {
+    this.selectedFile = null;
+    if (this.previewUrl) URL.revokeObjectURL(this.previewUrl);
+    this.previewUrl = null;
+  }
+
   // Envio do formulário com validação visual e alerta
   onSubmit() {
     this.cadastroForm.markAllAsTouched();
@@ -143,20 +173,74 @@ export class CadastroComponent {
       };
     }
 
+    // 1) Cadastrar usuário
     this.http.post(this.baseURL, usuarioFinal).subscribe({
       next: (res: any) => {
-        const usuarioSalvo = {
-          ...usuarioFinal,
-          id: res.id,
-          foto:
-            usuarioFinal.email?.trim().toLowerCase() === 'herivelton02@gmail.com'
-              ? '/assets/foto-heri.png'
-              : (usuarioFinal.genero ? '/assets/profile_man.jpeg' : '/assets/profile_woman.jpeg')
-        };
+        const idUsuario = res?.id;
 
-        localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
-        alert('✅ Conta criada com sucesso! ✅');
-        this.router.navigate(['/login']);
+        // 2) Login automático para obter token (necessário para upload)
+        this.http.post(`${this.baseURL}/login`, {
+          email: (formData.email as string).trim().toLowerCase(),
+          senha: formData.senha
+        }).subscribe({
+          next: (login: any) => {
+            const token = login?.token as string | undefined;
+
+            // 3) Se houver foto selecionada, fazer upload
+            if (token && this.selectedFile) {
+              const fd = new FormData();
+              fd.append('file', this.selectedFile, this.selectedFile.name);
+
+              const headers = new HttpHeaders({
+                Authorization: `Bearer ${token}`
+              });
+
+              this.http.post(`${this.baseURL}/foto/upload`, fd, { headers }).subscribe({
+                next: (up: any) => {
+                  const usuarioSalvo = {
+                    ...usuarioFinal,
+                    id: idUsuario,
+                    foto: up?.fotoUrl // URL pública do Supabase
+                  };
+                  localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
+                  alert('✅ Conta criada e foto enviada!');
+                  this.router.navigate(['/login']);
+                },
+                error: () => {
+                  // Sem bloquear o fluxo caso o upload falhe
+                  const placeholder = usuarioFinal.genero
+                    ? '/assets/profile_man.jpeg'
+                    : '/assets/profile_woman.jpeg';
+                  const usuarioSalvo = {
+                    ...usuarioFinal,
+                    id: idUsuario,
+                    foto: placeholder
+                  };
+                  localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
+                  alert('✅ Conta criada (falha ao enviar foto, tente depois em Perfil).');
+                  this.router.navigate(['/login']);
+                }
+              });
+            } else {
+              // 4) Sem foto → salva com placeholder por gênero
+              const placeholder = usuarioFinal.genero
+                ? '/assets/profile_man.jpeg'
+                : '/assets/profile_woman.jpeg';
+              const usuarioSalvo = {
+                ...usuarioFinal,
+                id: idUsuario,
+                foto: placeholder
+              };
+              localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
+              alert('✅ Conta criada com sucesso!');
+              this.router.navigate(['/login']);
+            }
+          },
+          error: () => {
+            alert('Conta criada, mas não foi possível fazer login automático.');
+            this.router.navigate(['/login']);
+          }
+        });
       },
       error: (err) => {
         console.error('Erro ao cadastrar:', err);

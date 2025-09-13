@@ -8,7 +8,7 @@ import {
   AbstractControl
 } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { NgxMaskDirective } from 'ngx-mask';
 
@@ -25,6 +25,11 @@ export class GerenciarComponent implements OnInit {
   usuarioLogado: any;
   temVeiculo: boolean = false;
   idVeiculo: number | null = null;
+
+  // ===== NOVO: estado da foto =====
+  selectedFile: File | null = null;
+  previewUrl: string | null = null;
+  fotoRemovida = false;
 
   baseURL = isBrowser() && window.location.hostname.includes('localhost')
     ? 'http://localhost:3000/api'
@@ -53,7 +58,7 @@ export class GerenciarComponent implements OnInit {
     });
   }
 
-    ngOnInit(): void {
+  ngOnInit(): void {
     if (isBrowser()) {
       const usuario = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
 
@@ -94,6 +99,11 @@ export class GerenciarComponent implements OnInit {
           corCarro: usuario.veiculo.Cor,
           placa: usuario.veiculo.Placa_veiculo
         });
+      }
+
+      // Pré-visualizar foto atual (se existir)
+      if (usuario.foto || usuario.fotoUrl) {
+        this.previewUrl = usuario.foto || usuario.fotoUrl;
       }
     }
   }
@@ -171,6 +181,50 @@ export class GerenciarComponent implements OnInit {
     });
   }
 
+  // ===== NOVO: seleção/remoção da foto =====
+  onFotoChange(evt: Event) {
+    const input = evt.target as HTMLInputElement;
+    const file = input.files && input.files[0] ? input.files[0] : null;
+    if (!file) return;
+
+    const allow = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allow.includes(file.type)) {
+      alert('Arquivo inválido. Use JPG, PNG ou WEBP.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Arquivo muito grande (máx. 2MB).');
+      return;
+    }
+
+    this.selectedFile = file;
+    this.previewUrl = URL.createObjectURL(file);
+    this.fotoRemovida = false;
+  }
+
+  removerFoto() {
+    this.selectedFile = null;
+    // se previewUrl for blob local, revoga; se for URL pública, apenas some o preview
+    try { if (this.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(this.previewUrl); } catch {}
+    this.previewUrl = null;
+    this.fotoRemovida = true;
+  }
+
+  // ===== NOVO: helpers de upload/limpeza no back =====
+  private uploadFoto(token: string) {
+    if (!this.selectedFile) return Promise.resolve<{ fotoUrl?: string }>({});
+    const fd = new FormData();
+    fd.append('file', this.selectedFile, this.selectedFile.name);
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+    return this.http.post<any>(`${this.baseURL}/usuario/foto/upload`, fd, { headers }).toPromise();
+  }
+
+  private limparFoto(token: string) {
+    if (!this.fotoRemovida) return Promise.resolve();
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+    return this.http.patch(`${this.baseURL}/usuario/foto`, { fotoUrl: null, fotoPath: null }, { headers }).toPromise();
+  }
+
   onSubmit() {
     this.form.markAllAsTouched();
 
@@ -198,7 +252,25 @@ export class GerenciarComponent implements OnInit {
       const id = this.usuarioLogado.id || this.usuarioLogado.idUsuario;
 
       this.http.put(`${this.baseURL}/usuario/${id}`, usuarioAtualizado).subscribe({
-        next: () => {
+        next: async () => {
+          // ===== NOVO: processa foto após atualizar dados =====
+          try {
+            const token = (isBrowser() ? localStorage.getItem('token') : null) || '';
+            if (token) {
+              if (this.selectedFile) {
+                const up: any = await this.uploadFoto(token);
+                if (up?.fotoUrl) {
+                  this.usuarioLogado = { ...this.usuarioLogado, foto: up.fotoUrl, fotoUrl: up.fotoUrl };
+                }
+              } else if (this.fotoRemovida) {
+                await this.limparFoto(token);
+                this.usuarioLogado = { ...this.usuarioLogado, foto: null, fotoUrl: null };
+              }
+            }
+          } catch (e) {
+            console.warn('Falha ao processar foto (upload/limpar), seguindo com atualização:', e);
+          }
+
           if (this.temVeiculo) {
             const veiculo = {
               Modelo: formData.modeloCarro,
@@ -247,7 +319,8 @@ export class GerenciarComponent implements OnInit {
       ...usuarioAtualizado,
       id: this.usuarioLogado.id,
       veiculo: veiculo,
-      foto: this.usuarioLogado.foto
+      // mantém a foto atualizada (upload/limpeza)
+      foto: this.usuarioLogado.foto ?? this.usuarioLogado.fotoUrl ?? null
     };
 
     if (isBrowser()) {

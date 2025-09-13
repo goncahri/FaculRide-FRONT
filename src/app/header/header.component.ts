@@ -27,19 +27,9 @@ export class HeaderComponent implements OnInit {
         const usuario = JSON.parse(usuarioLogado);
         this.nomeUsuario = usuario.nome?.split(' ')[0] || 'Usuário';
 
-        const fotosDevs: { [email: string]: string } = {
-          'anthonny@gmail.com': 'anthonny.jpeg',
-          'breno@gmail.com': 'breno.jpeg',
-          'gabriel@gmail.com': 'gabriel.jpeg',
-          'herivelton02@gmail.com': 'heri.jpeg',
-          'wendel@gmail.com': 'wendel.jpeg',
-          'wesley@gmail.com': 'wesley.jpeg'
-        };
-
-        const email = usuario.email?.trim().toLowerCase();
-
-        if (fotosDevs[email]) {
-          this.fotoUsuario = `/assets/${fotosDevs[email]}`;
+        // ✅ Usa foto do Supabase se existir
+        if (usuario.foto) {
+          this.fotoUsuario = usuario.foto;
         } else if (usuario.genero === true) {
           this.fotoUsuario = '/assets/profile_man.jpeg';
         } else if (usuario.genero === false) {
@@ -51,7 +41,7 @@ export class HeaderComponent implements OnInit {
         this.isLoggedIn = true;
       } else {
         this.nomeUsuario = '';
-        this.fotoUsuario = '/assets/profile_man.jpeg';
+        this.fotoUsuario = '/assets/usuario.png';
         this.isLoggedIn = false;
       }
     }

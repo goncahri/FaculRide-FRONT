@@ -36,25 +36,16 @@ export class UsuarioComponent implements OnInit {
   }
 
   obterFotoUsuario(email: string, genero: any): string {
-    const fotosDevs: { [email: string]: string } = {
-      'anthonny@gmail.com': 'anthonny.jpeg',
-      'breno@gmail.com': 'breno.jpeg',
-      'gabriel@gmail.com': 'gabriel.jpeg',
-      'herivelton02@gmail.com': 'heri.jpeg',
-      'wendel@gmail.com': 'wendel.jpeg',
-      'wesley@gmail.com': 'wesley.jpeg'
-    };
-
-    if (fotosDevs[email?.trim().toLowerCase()]) {
-      return `/assets/${fotosDevs[email.trim().toLowerCase()]}`;
+    const usuarioLogado = localStorage.getItem('usuarioLogado');
+    if (usuarioLogado) {
+      const u = JSON.parse(usuarioLogado);
+      if (u.foto || u.fotoUrl) {
+        return u.foto || u.fotoUrl;
+      }
     }
 
-    if (genero === true) {
-      return '/assets/profile_man.jpeg';
-    } else if (genero === false) {
-      return '/assets/profile_woman.jpeg';
-    }
-
+    if (genero === true) return '/assets/profile_man.jpeg';
+    if (genero === false) return '/assets/profile_woman.jpeg';
     return '/assets/usuario.png';
   }
 }

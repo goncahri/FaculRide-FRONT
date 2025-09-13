@@ -115,6 +115,25 @@
       </ng-template>
     </div>
 
+        <!-- Foto do perfil (opcional) -->
+    <div class="form-group">
+      <label for="foto">Foto do perfil (opcional)</label>
+
+      <!-- Preview (mostra se houver imagem selecionada) -->
+      <div class="foto-preview" *ngIf="previewUrl as src">
+        <img [src]="src" alt="Pré-visualização da foto" style="width:96px;height:96px;object-fit:cover;border-radius:50%;border:2px solid #ddd" />
+        <button type="button" (click)="removerFoto()">Remover</button>
+      </div>
+
+      <input
+        id="foto"
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        (change)="onFotoChange($event)" />
+
+      <small>Formatos: JPG/PNG/WEBP — até 2MB</small>
+    </div>
+
     <button type="submit">Salvar Alterações</button>
   </form>
 </section>

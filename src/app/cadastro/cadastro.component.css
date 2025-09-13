@@ -89,6 +89,33 @@ small {
   margin-top: 2px;
 }
 
+/* Foto do perfil */
+.foto-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.foto-preview img {
+  border-radius: 50%;
+  border: 2px solid #ccc;
+}
+
+.foto-preview button {
+  background: #e11d48; 
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.foto-preview button:hover {
+  background: #be123c;
+}
+
 /* Responsividade */
 @media (max-width: 480px) {
   .register-section {

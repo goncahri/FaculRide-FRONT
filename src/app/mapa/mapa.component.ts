@@ -264,25 +264,15 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   obterFotoUsuario(email: string, genero: any): string {
-    const fotosDevs: { [email: string]: string } = {
-      'anthonny@gmail.com': 'anthonny.jpeg',
-      'breno@gmail.com': 'breno.jpeg',
-      'herivelton02@gmail.com': 'heri.jpeg',
-      'gabriel@gmail.com': 'gabriel.jpeg',
-      'wendel@gmail.com': 'wendel.jpeg',
-      'wesley@gmail.com': 'wesley.jpeg'
-    };
+    const u = this.usuarios.find(
+      (x) => x?.email?.trim().toLowerCase() === (email || '').trim().toLowerCase()
+    );
 
-    if (fotosDevs[email]) {
-      return `assets/${fotosDevs[email]}`;
-    }
+    const url = u?.foto || u?.fotoUrl;
+    if (url) return url;
 
-    if (genero === true) {
-      return 'assets/profile_man.jpeg';
-    } else if (genero === false) {
-      return 'assets/profile_woman.jpeg';
-    }
-
+    if (genero === true) return 'assets/profile_man.jpeg';
+    if (genero === false) return 'assets/profile_woman.jpeg';
     return 'assets/usuario.png';
   }
 

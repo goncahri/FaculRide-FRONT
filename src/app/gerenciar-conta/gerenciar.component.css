@@ -115,6 +115,33 @@ small {
   margin-top: -5px;
 }
 
+/* Foto de perfil na tela de Gerenciar Conta */
+.foto-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.foto-preview img {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.foto-preview button {
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.3s ease;
+}
+
+.foto-preview button:hover {
+  background-color: #b91c1c;
+}
+
 /* Responsividade */
 @media (max-width: 480px) {
   .gerenciar-section {
