@@ -24,7 +24,7 @@ export class CadastroComponent {
   anoAtual = new Date().getFullYear();
   hoje: string = new Date().toISOString().split('T')[0];
 
-  // ===== NOVO: estado da foto =====
+  // NOVO: estado do arquivo da foto (cadastro)
   selectedFile: File | null = null;
   previewUrl: string | null = null;
 
@@ -119,7 +119,7 @@ export class CadastroComponent {
       });
   }
 
-  // ===== NOVO: selecionar/remover foto =====
+  // NOVO: seleção/preview de foto no cadastro
   onFotoChange(evt: Event) {
     const input = evt.target as HTMLInputElement;
     const file = input.files && input.files[0] ? input.files[0] : null;
@@ -130,10 +130,12 @@ export class CadastroComponent {
       alert('Arquivo inválido. Use JPG, PNG ou WEBP.');
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Arquivo muito grande (máx. 2MB).');
+    // mesmo limite do back (2MB); se quiser aumentar, eu ajusto os dois lados
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Arquivo muito grande (máx. 5MB).');
       return;
     }
+
 
     this.selectedFile = file;
     this.previewUrl = URL.createObjectURL(file);
@@ -141,7 +143,7 @@ export class CadastroComponent {
 
   removerFoto() {
     this.selectedFile = null;
-    if (this.previewUrl) URL.revokeObjectURL(this.previewUrl);
+    try { if (this.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(this.previewUrl); } catch {}
     this.previewUrl = null;
   }
 
@@ -173,74 +175,68 @@ export class CadastroComponent {
       };
     }
 
-    // 1) Cadastrar usuário
+    // 1) Cadastra o usuário
     this.http.post(this.baseURL, usuarioFinal).subscribe({
-      next: (res: any) => {
-        const idUsuario = res?.id;
+      next: async (res: any) => {
+        try {
+          // 2) Login silencioso para obter o token
+          const loginResp: any = await this.http.post(`${this.baseURL}/login`, {
+            email: formData.email,
+            senha: formData.senha
+          }).toPromise();
 
-        // 2) Login automático para obter token (necessário para upload)
-        this.http.post(`${this.baseURL}/login`, {
-          email: (formData.email as string).trim().toLowerCase(),
-          senha: formData.senha
-        }).subscribe({
-          next: (login: any) => {
-            const token = login?.token as string | undefined;
-
-            // 3) Se houver foto selecionada, fazer upload
-            if (token && this.selectedFile) {
-              const fd = new FormData();
-              fd.append('file', this.selectedFile, this.selectedFile.name);
-
-              const headers = new HttpHeaders({
-                Authorization: `Bearer ${token}`
-              });
-
-              this.http.post(`${this.baseURL}/foto/upload`, fd, { headers }).subscribe({
-                next: (up: any) => {
-                  const usuarioSalvo = {
-                    ...usuarioFinal,
-                    id: idUsuario,
-                    foto: up?.fotoUrl // URL pública do Supabase
-                  };
-                  localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
-                  alert('✅ Conta criada e foto enviada!');
-                  this.router.navigate(['/login']);
-                },
-                error: () => {
-                  // Sem bloquear o fluxo caso o upload falhe
-                  const placeholder = usuarioFinal.genero
-                    ? '/assets/profile_man.jpeg'
-                    : '/assets/profile_woman.jpeg';
-                  const usuarioSalvo = {
-                    ...usuarioFinal,
-                    id: idUsuario,
-                    foto: placeholder
-                  };
-                  localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
-                  alert('✅ Conta criada (falha ao enviar foto, tente depois em Perfil).');
-                  this.router.navigate(['/login']);
-                }
-              });
-            } else {
-              // 4) Sem foto → salva com placeholder por gênero
-              const placeholder = usuarioFinal.genero
-                ? '/assets/profile_man.jpeg'
-                : '/assets/profile_woman.jpeg';
-              const usuarioSalvo = {
-                ...usuarioFinal,
-                id: idUsuario,
-                foto: placeholder
-              };
-              localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
-              alert('✅ Conta criada com sucesso!');
-              this.router.navigate(['/login']);
-            }
-          },
-          error: () => {
-            alert('Conta criada, mas não foi possível fazer login automático.');
-            this.router.navigate(['/login']);
+          const token = loginResp?.token || '';
+          const usuarioDoLogin = loginResp?.usuario || {};
+          if (token) {
+            localStorage.setItem('token', token);
           }
-        });
+
+            // monta objeto salvo (mantendo padrão que você já usa)
+            const usuarioSalvo = {
+              ...usuarioFinal,
+              id: usuarioDoLogin?.id ?? res.id,
+              idUsuario: usuarioDoLogin?.id ?? res.id,
+              veiculo: usuarioDoLogin?.veiculo ?? (usuarioFinal.veiculo || null),
+              foto: null
+            };
+
+          // 3) Se tiver foto, envia agora com Authorization
+          if (token && this.selectedFile) {
+            const fd = new FormData();
+            fd.append('file', this.selectedFile, this.selectedFile.name);
+            const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+
+            try {
+              const up: any = await this.http
+                .post(`${this.baseURL}/foto/upload`, fd, { headers })
+                .toPromise();
+
+              if (up?.fotoUrl) {
+                usuarioSalvo.foto = up.fotoUrl;
+                usuarioSalvo.fotoUrl = up.fotoUrl;
+              }
+            } catch (e) {
+              console.warn('Upload de foto falhou após cadastro:', e);
+              // segue sem travar a criação da conta
+            }
+          }
+
+          // 4) Salva no localStorage e navega
+          localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
+          alert('✅ Conta criada com sucesso!');
+          this.router.navigate(['/login']);
+        } catch (e) {
+          console.error('Falha no login/ upload pós-cadastro:', e);
+          // fallback: salva usuário sem foto
+          const usuarioSalvo = {
+            ...usuarioFinal,
+            id: res.id,
+            foto: null
+          };
+          localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
+          alert('Conta criada, mas não foi possível concluir o envio da foto. Você pode enviar depois em Perfil.');
+          this.router.navigate(['/login']);
+        }
       },
       error: (err) => {
         console.error('Erro ao cadastrar:', err);
