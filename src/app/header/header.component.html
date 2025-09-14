@@ -30,11 +30,11 @@
 
     <ng-template #usuarioLogado>
       <div class="user-dropdown" (click)="toggleDropdown()">
-        <img 
-          [src]="fotoUsuario" 
-          alt="Foto do usuário" 
+        <img
+          [src]="fotoUsuario"
+          alt="Foto do usuário"
           class="user-photo"
-          (error)="fotoUsuario = '/assets/foto-heri.png'"
+          (error)="onImgError()"
         />
         <span class="user-name">{{ nomeUsuario }}</span>
         <span class="arrow-down">▼</span>

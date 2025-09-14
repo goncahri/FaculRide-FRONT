@@ -27,16 +27,17 @@ export class HeaderComponent implements OnInit {
         const usuario = JSON.parse(usuarioLogado);
         this.nomeUsuario = usuario.nome?.split(' ')[0] || 'Usuário';
 
-        // ✅ Usa foto do Supabase se existir
-        if (usuario.foto) {
-          this.fotoUsuario = usuario.foto;
-        } else if (usuario.genero === true) {
-          this.fotoUsuario = '/assets/profile_man.jpeg';
-        } else if (usuario.genero === false) {
-          this.fotoUsuario = '/assets/profile_woman.jpeg';
-        } else {
-          this.fotoUsuario = '/assets/usuario.png';
-        }
+        // 👉 PRIORIDADE: fotoUrl (Supabase) → foto (legado) → avatares padrão
+        const url: string | undefined = usuario.fotoUrl || usuario.foto;
+        const fallback =
+          usuario.genero === true
+            ? '/assets/profile_man.jpeg'
+            : usuario.genero === false
+            ? '/assets/profile_woman.jpeg'
+            : '/assets/usuario.png';
+
+        // cache-buster pra não ficar com a imagem antiga após upload
+        this.fotoUsuario = url ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}` : fallback;
 
         this.isLoggedIn = true;
       } else {
@@ -45,6 +46,11 @@ export class HeaderComponent implements OnInit {
         this.isLoggedIn = false;
       }
     }
+  }
+
+  // fallback se a imagem pública do Supabase falhar
+  onImgError(): void {
+    this.fotoUsuario = '/assets/usuario.png';
   }
 
   toggleDropdown(): void {
