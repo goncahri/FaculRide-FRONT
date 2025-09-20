@@ -1,9 +1,15 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 
 Chart.register(...registerables);
+
+type PublicStatsResponse = {
+  usuarios: { motoristas: number; passageiros: number };
+  viagensSemana: number[];   // [seg..dom]
+  mediaAval: number;         // 0..5
+};
 
 @Component({
   selector: 'app-home-stats',
@@ -35,18 +41,18 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(private http: HttpClient) {}
 
-  ngOnInit(): void {
-    // nada aqui — carregamos os dados em ngAfterViewInit para garantir os canvases
-  }
+  ngOnInit(): void {}
 
   ngAfterViewInit(): void {
-    this.load().catch(err => {
-      console.error(err);
-      this.errorMsg = 'Erro ao carregar estatísticas';
-    }).finally(() => {
-      this.loading = false;
-      this.renderCharts();
-    });
+    this.load()
+      .catch(err => {
+        console.error(err);
+        this.errorMsg = 'Erro ao carregar estatísticas';
+      })
+      .finally(() => {
+        this.loading = false;
+        this.renderCharts();
+      });
   }
 
   ngOnDestroy(): void {
@@ -55,88 +61,16 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.mediaChart?.destroy();
   }
 
-  // ===================== DATA FETCH =====================
-  private getAuthHeaders(): HttpHeaders | undefined {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
-    // Não colocamos Content-Type aqui — Chart não precisa.
-  }
-
+  // ===================== DATA FETCH (público) =====================
   private async load() {
-    const [uc, vw, avg] = await Promise.all([
-      this.fetchUsuariosCounts(),
-      this.fetchViagensByWeekday(),
-      this.fetchAvgRating()
-    ]);
-    this.usuariosCounts = uc;
-    this.viagensWeek = vw;
-    this.avg = avg;
-  }
+    const stats = await this.http
+      .get<PublicStatsResponse>(`${this.baseURL}/public/stats`)
+      .toPromise();
 
-  private async fetchUsuariosCounts(): Promise<{ motoristas: number; passageiros: number }> {
-    const headers = this.getAuthHeaders();
-    if (headers) {
-      const usuarios = await this.http.get<any[]>(`${this.baseURL}/usuario`, { headers }).toPromise();
-      let m = 0, p = 0;
-      (usuarios || []).forEach(u => {
-        const t = (u.tipoUsuario || '').toString().toLowerCase();
-        if (t === 'motorista') m++;
-        else if (t === 'passageiro') p++;
-      });
-      return { motoristas: m, passageiros: p };
-    } else {
-      const viagens = await this.http.get<any[]>(`${this.baseURL}/viagem`).toPromise();
-      let m = 0, p = 0;
-      (viagens || []).forEach(v => {
-        const t = (v.tipoUsuario || '').toString().toLowerCase();
-        if (t.includes('motor')) m++;
-        else if (t.includes('passag')) p++;
-      });
-      return { motoristas: m, passageiros: p };
-    }
-  }
-
-  private async fetchViagensByWeekday(): Promise<number[]> {
-    const counts = [0, 0, 0, 0, 0, 0, 0]; // seg..dom
-    try {
-      const viagens = await this.http.get<any[]>(`${this.baseURL}/viagem`).toPromise();
-      (viagens || []).forEach(v => {
-        const raw = v.createdAt || v.data || v.dataViagem || v.dataCadastro;
-        const d = raw ? new Date(raw) : null;
-        if (d && !isNaN(d.getTime())) {
-          const wd = d.getDay();            // 0 dom .. 6 sáb
-          const idx = wd === 0 ? 6 : wd - 1; // 0 seg .. 6 dom
-          counts[idx] += 1;
-        }
-      });
-    } catch {}
-
-    // fallback: log de acesso
-    if (counts.every(n => n === 0)) {
-      try {
-        const logs = await this.http.get<any[]>(`${this.baseURL}/logacesso`).toPromise();
-        (logs || []).forEach(l => {
-          const d = l.dataAcesso ? new Date(l.dataAcesso) : null;
-          if (d && !isNaN(d.getTime())) {
-            const wd = d.getDay();
-            const idx = wd === 0 ? 6 : wd - 1;
-            counts[idx] += 1;
-          }
-        });
-      } catch {}
-    }
-    return counts;
-  }
-
-  private async fetchAvgRating(): Promise<number> {
-    try {
-      const avs = await this.http.get<any[]>(`${this.baseURL}/avaliacao`).toPromise();
-      const stars = (avs || []).map(a => Number(a.Estrelas)).filter(n => !isNaN(n));
-      if (!stars.length) return 0;
-      const sum = stars.reduce((acc, n) => acc + n, 0);
-      return Math.round((sum / stars.length) * 10) / 10;
-    } catch {
-      return 0;
+    if (stats) {
+      this.usuariosCounts = stats.usuarios ?? this.usuariosCounts;
+      this.viagensWeek    = (stats.viagensSemana ?? this.viagensWeek).slice(0, 7);
+      this.avg            = stats.mediaAval ?? 0;
     }
   }
 
