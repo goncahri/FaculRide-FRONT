@@ -5,10 +5,15 @@ import { Chart, ChartConfiguration, registerables } from 'chart.js';
 
 Chart.register(...registerables);
 
+// Aceita os dois formatos de resposta para evitar quebra do front:
 type PublicStatsResponse = {
-  usuarios: { motoristas: number; passageiros: number };
-  viagensSemana: number[];   // [seg..dom]
-  mediaAval: number;         // 0..5
+  // formato antigo
+  usuarios?: { motoristas: number; passageiros: number };
+  mediaAval?: number; // 0..5
+
+  // formato novo (sugerido)
+  totais?: { motoristas: number; passageiros: number };
+  satisfacaoMedia?: number; // 0..5
 };
 
 @Component({
@@ -20,7 +25,6 @@ type PublicStatsResponse = {
 })
 export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('usuariosChart') usuariosChartRef!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('viagensChart')  viagensChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('mediaChart')    mediaChartRef!: ElementRef<HTMLCanvasElement>;
 
   baseURL =
@@ -29,7 +33,6 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       : 'https://projeto-faculride.onrender.com/api';
 
   usuariosChart?: Chart;
-  viagensChart?: Chart;
   mediaChart?: Chart;
 
   loading = true;
@@ -37,7 +40,6 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
   avg = 0;
 
   private usuariosCounts = { motoristas: 0, passageiros: 0 };
-  private viagensWeek = [0, 0, 0, 0, 0, 0, 0]; // seg..dom
 
   constructor(private http: HttpClient) {}
 
@@ -57,7 +59,6 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.usuariosChart?.destroy();
-    this.viagensChart?.destroy();
     this.mediaChart?.destroy();
   }
 
@@ -68,9 +69,20 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       .toPromise();
 
     if (stats) {
-      this.usuariosCounts = stats.usuarios ?? this.usuariosCounts;
-      this.viagensWeek    = (stats.viagensSemana ?? this.viagensWeek).slice(0, 7);
-      this.avg            = stats.mediaAval ?? 0;
+      // Suporta os dois formatos (usuarios ou totais)
+      const totals = stats.usuarios ?? stats.totais;
+      if (totals) {
+        this.usuariosCounts = {
+          motoristas: totals.motoristas ?? 0,
+          passageiros: totals.passageiros ?? 0,
+        };
+      }
+
+      // média 0..5 (mediaAval ou satisfacaoMedia)
+      this.avg = stats.mediaAval ?? stats.satisfacaoMedia ?? 0;
+      // saneamento: limita a faixa pra evitar render estranho no gauge
+      if (typeof this.avg !== 'number' || isNaN(this.avg)) this.avg = 0;
+      this.avg = Math.max(0, Math.min(5, this.avg));
     }
   }
 
@@ -78,7 +90,6 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
   private renderCharts() {
     // destrói antigos (hot reload / navegação)
     this.usuariosChart?.destroy();
-    this.viagensChart?.destroy();
     this.mediaChart?.destroy();
 
     // 1) Doughnut Motoristas x Passageiros
@@ -86,7 +97,11 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       type: 'doughnut',
       data: {
         labels: ['Motoristas', 'Passageiros'],
-        datasets: [{ data: [this.usuariosCounts.motoristas, this.usuariosCounts.passageiros] }]
+        datasets: [
+          {
+            data: [this.usuariosCounts.motoristas, this.usuariosCounts.passageiros]
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -94,32 +109,17 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       } as ChartConfiguration<'doughnut'>['options']
     });
 
-    // 2) Barras Viagens por dia da semana
-    this.viagensChart = new Chart(this.viagensChartRef.nativeElement, {
-      type: 'bar',
-      data: {
-        labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
-        datasets: [{ data: this.viagensWeek, label: 'Viagens' }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          x: { grid: { display: false } },
-          y: { beginAtZero: true, ticks: { precision: 0 } }
-        },
-        plugins: { legend: { display: false } }
-      } as ChartConfiguration<'bar'>['options']
-    });
-
     // 3) Gauge da média (meia-lua)
-    const remain = Math.max(0, 5 - this.avg);
+    const filled = this.avg;
+    const remain = Math.max(0, 5 - filled);
+
     this.mediaChart = new Chart(this.mediaChartRef.nativeElement, {
       type: 'doughnut',
-      data: { labels: ['Média', ''], datasets: [{ data: [this.avg, remain] }] },
+      data: { labels: ['Média', ''], datasets: [{ data: [filled, remain] }] },
       options: {
         responsive: true,
-        circumference: 180,
-        rotation: -90,
+        circumference: 180,  // meia-lua
+        rotation: -90,       // começa à esquerda
         cutout: '70%',
         plugins: { legend: { display: false } }
       } as ChartConfiguration<'doughnut'>['options']

@@ -2,21 +2,21 @@
   <h2>Números do FaculRide</h2>
 
   <div class="stats-grid">
+    <!-- CARD 1: Totais Motoristas x Passageiros -->
     <div class="card">
       <h2 class="chart-title">Veja o crescimento da nossa comunidade!</h2>
-      <p class="chart-subtitle">O FaculRide está equilibrando oferta e demanda para você nunca ficar sem carona.</p>
+      <p class="chart-subtitle">
+        O FaculRide está equilibrando oferta e demanda para você nunca ficar sem carona.
+      </p>
       <canvas #usuariosChart></canvas>
     </div>
 
-    <div class="card">
-      <h2 class="chart-title">Descubra os dias com mais caronas</h2>
-      <p class="chart-subtitle">Planeje sua semana e aproveite os dias mais movimentados para oferecer ou encontrar caronas.</p>
-      <canvas #viagensChart></canvas>
-    </div>
-
+    <!-- CARD 2: Satisfação (gauge) -->
     <div class="card">
       <h2 class="chart-title">Satisfação garantida ⭐</h2>
-      <p class="chart-subtitle">Nossa comunidade tem uma das maiores taxas de aprovação entre sites de carona universitária no Brasil!</p>
+      <p class="chart-subtitle">
+        Nossa comunidade tem uma das maiores taxas de aprovação entre sites de carona universitária no Brasil!
+      </p>
       <div class="gauge-wrap">
         <canvas #mediaChart></canvas>
         <div class="gauge-value">{{ avg | number:'1.1-1' }} / 5</div>
