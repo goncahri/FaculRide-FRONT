@@ -1,25 +1,32 @@
 <section class="stats-section">
   <h2>Números do FaculRide</h2>
+  <p class="section-intro">
+    A FaculRide cresce a cada dia 🚗💨 — conectando motoristas e passageiros para tornar a mobilidade
+    universitária mais fácil, segura e sustentável. Confira os números da nossa comunidade!
+  </p>
 
   <div class="stats-grid">
     <!-- CARD 1: Totais Motoristas x Passageiros -->
     <div class="card">
-      <h2 class="chart-title">Veja o crescimento da nossa comunidade!</h2>
+      <h2 class="chart-title">Crescimento da Comunidade</h2>
       <p class="chart-subtitle">
-        O FaculRide está equilibrando oferta e demanda para você nunca ficar sem carona.
+        Acompanhe o equilíbrio entre quem oferece e quem procura carona.
       </p>
-      <canvas #usuariosChart></canvas>
+      <div class="chart-container">
+        <canvas #usuariosChart></canvas>
+        <div class="chart-center-label">{{ motoristasPercent }}% Motoristas</div>
+      </div>
     </div>
 
     <!-- CARD 2: Satisfação (gauge) -->
     <div class="card">
-      <h2 class="chart-title">Satisfação garantida ⭐</h2>
+      <h2 class="chart-title">Satisfação Garantida ⭐</h2>
       <p class="chart-subtitle">
-        Nossa comunidade tem uma das maiores taxas de aprovação entre sites de carona universitária no Brasil!
+        Nossa comunidade tem uma das maiores notas de aprovação entre apps de carona universitária no Brasil!
       </p>
-      <div class="gauge-wrap">
+      <div class="chart-container">
         <canvas #mediaChart></canvas>
-        <div class="gauge-value">{{ avg | number:'1.1-1' }} / 5</div>
+        <div class="chart-center-label">{{ avg | number:'1.1-1' }}/5</div>
       </div>
     </div>
   </div>

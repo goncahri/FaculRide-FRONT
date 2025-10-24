@@ -1,74 +1,98 @@
-.stats-section { 
-  padding: 40px 16px; 
-  background: #fff; 
+/* Seção */
+.stats-section {
+  padding: 40px 16px;
+  background: #fff;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.stats-section h2 { 
-  text-align: center; 
-  margin-bottom: 24px; 
-  color: #0f172a; 
+.stats-section h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #0f172a;
 }
 
-/* Ajustado para 2 colunas */
-.stats-grid { 
-  display: grid; 
-  grid-template-columns: repeat(2, 1fr); 
-  gap: 20px; 
+/* Parágrafo introdutório opcional abaixo do título */
+.section-intro {
+  text-align: center;
+  color: #475569;
+  font-size: 1rem;
+  margin: 0 0 24px;
 }
 
-.card { 
-  background: #f8fafc; 
-  border-radius: 12px; 
-  padding: 16px; 
-  box-shadow: 0 4px 12px rgba(0,0,0,.06); 
+/* Grid responsivo (2 colunas no desktop) */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 20px;
 }
 
-.card h3 { 
-  margin: 0 0 4px; 
-  color: #0f172a; 
+/* Card */
+.card {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.subtitle { 
-  margin: 0 0 12px; 
-  color: #475569; 
-  font-size: .95rem; 
+/* Títulos/subtítulos internos */
+.card h3,
+.chart-title {
+  margin: 0 0 6px;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 1.15rem;
 }
 
-.gauge-wrap { 
-  position: relative; 
-  width: 100%; 
-  max-width: 320px; 
-  margin: 0 auto; 
+.subtitle,
+.chart-subtitle {
+  margin: 0 0 14px;
+  color: #475569;
+  font-size: .95rem;
+  text-align: center;
 }
 
-.gauge-value { 
-  position: absolute; 
-  left: 50%; 
-  bottom: 12px; 
-  transform: translateX(-50%); 
-  font-weight: 700; 
-  color: #0f172a; 
+/* ===== Área do gráfico (igual para ambos) =====
+   - Use esta caixa para DOUGHNUT e GUEGE
+   - Garante formato quadrado e tamanhos idênticos
+*/
+:root { --chart-size: clamp(240px, 28vw, 320px); }
+
+.chart-container,
+.gauge-wrap {
+  position: relative;
+  width: var(--chart-size);
+  height: var(--chart-size);
+  margin: 0 auto;
 }
 
-.hint { 
-  text-align: center; 
-  color: #475569; 
-  margin-top: 12px; 
+/* Rótulos centrais (texto sobre o gráfico) */
+.chart-center-label,
+.gauge-value {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 1.05rem;
 }
 
-.error { 
-  text-align: center; 
-  color: #dc2626; 
-  margin-top: 12px; 
+/* Mensagens de estado */
+.hint { text-align: center; color: #475569; margin-top: 12px; }
+.error { text-align: center; color: #dc2626; margin-top: 12px; }
+
+/* Canvas ocupa a caixa 1:1 sem distorcer */
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-canvas { 
-  width: 100% !important; 
-  height: auto !important; 
-}
-
+/* Responsivo */
 @media (max-width: 900px) {
-  .stats-grid { 
-    grid-template-columns: 1fr; 
-  }
+  .stats-grid { grid-template-columns: 1fr; }
 }

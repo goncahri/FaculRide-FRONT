@@ -1,17 +1,17 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import {
+  Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-Chart.register(...registerables);
+Chart.register(...registerables, ChartDataLabels);
 
 // Aceita os dois formatos de resposta para evitar quebra do front:
 type PublicStatsResponse = {
-  // formato antigo
   usuarios?: { motoristas: number; passageiros: number };
   mediaAval?: number; // 0..5
-
-  // formato novo (sugerido)
   totais?: { motoristas: number; passageiros: number };
   satisfacaoMedia?: number; // 0..5
 };
@@ -69,7 +69,6 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       .toPromise();
 
     if (stats) {
-      // Suporta os dois formatos (usuarios ou totais)
       const totals = stats.usuarios ?? stats.totais;
       if (totals) {
         this.usuariosCounts = {
@@ -78,9 +77,7 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
         };
       }
 
-      // média 0..5 (mediaAval ou satisfacaoMedia)
       this.avg = stats.mediaAval ?? stats.satisfacaoMedia ?? 0;
-      // saneamento: limita a faixa pra evitar render estranho no gauge
       if (typeof this.avg !== 'number' || isNaN(this.avg)) this.avg = 0;
       this.avg = Math.max(0, Math.min(5, this.avg));
     }
@@ -92,37 +89,90 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.usuariosChart?.destroy();
     this.mediaChart?.destroy();
 
-    // 1) Doughnut Motoristas x Passageiros
+    const total = Math.max(
+      1,
+      (this.usuariosCounts.motoristas || 0) + (this.usuariosCounts.passageiros || 0)
+    );
+
+    // ===== 1) Doughnut Motoristas x Passageiros (com % no gráfico) =====
     this.usuariosChart = new Chart(this.usuariosChartRef.nativeElement, {
       type: 'doughnut',
       data: {
         labels: ['Motoristas', 'Passageiros'],
         datasets: [
           {
-            data: [this.usuariosCounts.motoristas, this.usuariosCounts.passageiros]
+            data: [this.usuariosCounts.motoristas, this.usuariosCounts.passageiros],
+            backgroundColor: ['#2b8cff', '#ff6384'],
+            hoverOffset: 6,
+            borderWidth: 0
           }
         ]
       },
       options: {
         responsive: true,
-        plugins: { legend: { position: 'bottom' } }
+        maintainAspectRatio: true,
+        aspectRatio: 1,               // >>> tamanhos iguais
+        cutout: '62%',                // melhora leitura do rótulo
+        plugins: {
+          legend: { position: 'bottom' },
+          datalabels: {
+            color: '#fff',
+            font: { weight: 'bold', size: 14 },
+            formatter: (value: number) => {
+              const p = (value / total) * 100;
+              return `${p.toFixed(0)}%`;
+            }
+          },
+          tooltip: { enabled: true }
+        }
       } as ChartConfiguration<'doughnut'>['options']
     });
 
-    // 3) Gauge da média (meia-lua)
+    // ===== 2) Gauge da média (meia-lua) com nota no centro =====
+    // plugin simples para escrever texto central no canvas
+    const centerText = {
+      id: 'centerText',
+      afterDraw: (chart: any) => {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+        const txt = `${this.avg.toFixed(1)} / 5`;
+        ctx.save();
+        ctx.font = '600 18px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.fillStyle = '#333';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(txt, (chartArea.left + chartArea.right) / 2, chartArea.bottom - 10);
+        ctx.restore();
+      }
+    };
+
     const filled = this.avg;
     const remain = Math.max(0, 5 - filled);
 
     this.mediaChart = new Chart(this.mediaChartRef.nativeElement, {
       type: 'doughnut',
-      data: { labels: ['Média', ''], datasets: [{ data: [filled, remain] }] },
+      data: {
+        labels: ['Média', ''],
+        datasets: [{
+          data: [filled, remain],
+          backgroundColor: ['#2b8cff', '#ff9db0'],
+          borderWidth: 0
+        }]
+      },
       options: {
         responsive: true,
-        circumference: 180,  // meia-lua
-        rotation: -90,       // começa à esquerda
+        maintainAspectRatio: true,
+        aspectRatio: 1,        // >>> tamanhos iguais
+        circumference: 180,    // meia-lua
+        rotation: -90,         // começa à esquerda
         cutout: '70%',
-        plugins: { legend: { display: false } }
-      } as ChartConfiguration<'doughnut'>['options']
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }, // sem hover; valor já aparece no centro
+          datalabels: { display: false }
+        }
+      } as ChartConfiguration<'doughnut'>['options'],
+      plugins: [centerText]
     });
   }
 }
