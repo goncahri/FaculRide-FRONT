@@ -81,7 +81,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
         this.viagens = res;
 
         this.caronasOferecidas = this.viagens
-          .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'Motorista')
+          .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'motorista')
           .map(v => ({
             partida: v.partida,
             destino: v.destino,
@@ -91,7 +91,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
           }));
 
         this.caronasProcuradas = this.viagens
-          .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'Passageiro')
+          .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'passageiro')
           .map(v => ({
             partida: v.partida,
             destino: v.destino,
