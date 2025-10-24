@@ -39,6 +39,9 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
   errorMsg = '';
   avg = 0;
 
+  // NOVO: valor exibido no centro do gráfico
+  motoristasPercent = '0';
+
   private usuariosCounts = { motoristas: 0, passageiros: 0 };
 
   constructor(private http: HttpClient) {}
@@ -89,10 +92,17 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
     this.usuariosChart?.destroy();
     this.mediaChart?.destroy();
 
-    const total = Math.max(
-      1,
-      (this.usuariosCounts.motoristas || 0) + (this.usuariosCounts.passageiros || 0)
-    );
+    // total e % para o label central do doughnut
+    const total =
+      Math.max(
+        1,
+        (this.usuariosCounts.motoristas || 0) +
+        (this.usuariosCounts.passageiros || 0)
+      );
+
+    this.motoristasPercent = (
+      (this.usuariosCounts.motoristas / total) * 100
+    ).toFixed(0);
 
     // ===== 1) Doughnut Motoristas x Passageiros (com % no gráfico) =====
     this.usuariosChart = new Chart(this.usuariosChartRef.nativeElement, {
@@ -111,7 +121,7 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: true,
-        aspectRatio: 1,               // >>> tamanhos iguais
+        aspectRatio: 1,               // tamanhos iguais
         cutout: '62%',                // melhora leitura do rótulo
         plugins: {
           legend: { position: 'bottom' },
@@ -129,7 +139,6 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     // ===== 2) Gauge da média (meia-lua) com nota no centro =====
-    // plugin simples para escrever texto central no canvas
     const centerText = {
       id: 'centerText',
       afterDraw: (chart: any) => {
@@ -162,7 +171,7 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: true,
-        aspectRatio: 1,        // >>> tamanhos iguais
+        aspectRatio: 1,        // tamanhos iguais
         circumference: 180,    // meia-lua
         rotation: -90,         // começa à esquerda
         cutout: '70%',
