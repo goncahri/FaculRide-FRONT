@@ -27,7 +27,7 @@
       <!-- estrelas + explicação -->
       <div class="rating">
         <div class="stars" aria-hidden="true">
-          <span class="star" *ngFor="let s of [1,2,3,4,5]" [class.filled]="s <= Math.round(avg)">★</span>
+          <span class="star" *ngFor="let s of stars" [class.filled]="s <= roundedAvg">★</span>
         </div>
         <div class="rating-text">
           {{ avg | number:'1.1-1' }}/5 — média das nossas avaliações das caronas
