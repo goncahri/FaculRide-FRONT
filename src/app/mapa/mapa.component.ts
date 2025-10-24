@@ -4,12 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { isBrowser } from '../utils/is-browser';
 
-// >>> ADIÇÕES (exportação)
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-
 @Component({
   selector: 'app-mapa',
   standalone: true,
@@ -82,44 +76,38 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   carregarViagens(): void {
-  this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
-    next: (res) => {
-      this.viagens = res;
+    this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
+      next: (res) => {
+        this.viagens = res;
 
-      this.caronasOferecidas = this.viagens
-        .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'Motorista')
-        .map(v => ({
-          partida: v.partida,
-          destino: v.destino,
-          entrada: v.horarioEntrada,
-          saida: v.horarioSaida,
-          ajuda: v.ajudaDeCusto
-        }));
+        this.caronasOferecidas = this.viagens
+          .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'Motorista')
+          .map(v => ({
+            partida: v.partida,
+            destino: v.destino,
+            entrada: v.horarioEntrada,
+            saida: v.horarioSaida,
+            ajuda: v.ajudaDeCusto
+          }));
 
-      this.caronasProcuradas = this.viagens
-        .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'Passageiro')
-        .map(v => ({
-          partida: v.partida,
-          destino: v.destino,
-          entrada: v.horarioEntrada,
-          saida: v.horarioSaida,
-          ajuda: v.ajudaDeCusto
-        }));
-    },
-    error: (err) => {
-      console.error('Erro ao carregar viagens:', err);
-    }
-  });
-}
+        this.caronasProcuradas = this.viagens
+          .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'Passageiro')
+          .map(v => ({
+            partida: v.partida,
+            destino: v.destino,
+            entrada: v.horarioEntrada,
+            saida: v.horarioSaida,
+            ajuda: v.ajudaDeCusto
+          }));
+      },
+      error: (err) => console.error('Erro ao carregar viagens:', err)
+    });
+  }
 
   carregarUsuarios(): void {
     this.http.get<any[]>(`${this.baseURL}/usuario`).subscribe({
-      next: (res) => {
-        this.usuarios = res;
-      },
-      error: (err) => {
-        console.error('Erro ao carregar usuários:', err);
-      }
+      next: (res) => (this.usuarios = res),
+      error: (err) => console.error('Erro ao carregar usuários:', err)
     });
   }
 
@@ -135,7 +123,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
       destino: this.destino,
       horarioEntrada: this.entradaFatec,
       horarioSaida: this.saidaFatec,
-      ajudaDeCusto: this.ajudaCusto ? this.ajudaCusto.toString() : "0",
+      ajudaDeCusto: this.ajudaCusto ? this.ajudaCusto.toString() : '0',
       idUsuario: this.meuId
     };
 
@@ -156,56 +144,33 @@ export class MapaComponent implements AfterViewInit, OnInit {
         destination: this.destino,
         travelMode: google.maps.TravelMode.DRIVING
       };
-
       const directionsService = new google.maps.DirectionsService();
-
       directionsService.route(request, (result, status) => {
-        if (status === 'OK' && result) {
-          this.directionsRenderer.setDirections(result);
-        } else {
-          console.error('Erro ao traçar rota:', status);
-        }
+        if (status === 'OK' && result) this.directionsRenderer.setDirections(result);
       });
     }
   }
 
   mostrarRota(partida: string, destino: string): void {
     if (isBrowser()) {
+      const directionsService = new google.maps.DirectionsService();
       const request: google.maps.DirectionsRequest = {
         origin: partida,
         destination: destino,
         travelMode: google.maps.TravelMode.DRIVING
       };
-
-      const directionsService = new google.maps.DirectionsService();
-
       directionsService.route(request, (result, status) => {
-        if (status === 'OK' && result) {
-          this.directionsRenderer.setDirections(result);
-        } else {
-          console.error('Erro ao traçar rota:', status);
-        }
+        if (status === 'OK' && result) this.directionsRenderer.setDirections(result);
       });
-
-      setTimeout(() => {
-        this.mapContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
+      setTimeout(() => this.mapContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
     }
   }
 
   abrirWhatsapp(nome: string, idUsuario: number, numeroWhatsapp: string) {
-    if (!numeroWhatsapp) {
-      alert('Número de WhatsApp não disponível');
-      return;
-    }
-
-    if (isBrowser()) {
-      window.open(`https://wa.me/${numeroWhatsapp}`, '_blank');
-    }
-
+    if (!numeroWhatsapp) return alert('Número de WhatsApp não disponível');
+    if (isBrowser()) window.open(`https://wa.me/${numeroWhatsapp}`, '_blank');
     setTimeout(() => {
-      const confirmado = confirm(`A carona com ${nome} foi realizada? Deseja avaliar?`);
-      if (confirmado) {
+      if (confirm(`A carona com ${nome} foi realizada? Deseja avaliar?`)) {
         this.nomeUsuarioSelecionado = nome;
         this.idUsuarioSelecionado = idUsuario;
         this.mostrarAvaliacao = true;
@@ -214,18 +179,13 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   enviarAvaliacao() {
-    if (!this.avaliacaoSelecionada) {
-      alert('Por favor, selecione uma nota.');
-      return;
-    }
-
+    if (!this.avaliacaoSelecionada) return alert('Por favor, selecione uma nota.');
     const avaliacao = {
       ID_Avaliador: this.meuId,
       ID_Avaliado: this.idUsuarioSelecionado,
       Comentario: this.comentarioAvaliacao,
       Estrelas: this.avaliacaoSelecionada
     };
-
     this.http.post(`${this.baseURL}/avaliacao`, avaliacao).subscribe({
       next: () => {
         alert(`✅ Avaliação enviada! Você avaliou ${this.nomeUsuarioSelecionado} com ${this.avaliacaoSelecionada} ⭐`);
@@ -246,21 +206,12 @@ export class MapaComponent implements AfterViewInit, OnInit {
       next: (res) => {
         this.avaliacoesRecebidas = res
           .filter(a => a.ID_Avaliado === this.meuId)
-          .map(a => ({
-            ...a,
-            nomeAvaliador: this.pegarNomeUsuario(a.ID_Avaliador)
-          }));
-
+          .map(a => ({ ...a, nomeAvaliador: this.pegarNomeUsuario(a.ID_Avaliador) }));
         this.avaliacoesEnviadas = res
           .filter(a => a.ID_Avaliador === this.meuId)
-          .map(a => ({
-            ...a,
-            nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado)
-          }));
+          .map(a => ({ ...a, nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado) }));
       },
-      error: (err) => {
-        console.error('Erro ao carregar avaliações:', err);
-      }
+      error: (err) => console.error('Erro ao carregar avaliações:', err)
     });
   }
 
@@ -270,65 +221,50 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   obterFotoUsuario(email: string, genero: any): string {
-    const u = this.usuarios.find(
-      (x) => x?.email?.trim().toLowerCase() === (email || '').trim().toLowerCase()
-    );
-
+    const u = this.usuarios.find(x => x?.email?.trim().toLowerCase() === (email || '').trim().toLowerCase());
     const url = u?.foto || u?.fotoUrl;
     if (url) return url;
-
     if (genero === true) return 'assets/profile_man.jpeg';
     if (genero === false) return 'assets/profile_woman.jpeg';
     return 'assets/usuario.png';
   }
 
   excluirCarona(idViagem: number) {
-  const confirmacao = confirm('Tem certeza que deseja excluir esta carona?');
-  if (!confirmacao) return;
+    if (!confirm('Tem certeza que deseja excluir esta carona?')) return;
+    this.http.delete(`${this.baseURL}/viagem/${idViagem}`).subscribe({
+      next: () => {
+        alert('Carona excluída com sucesso!');
+        this.carregarViagens();
+      },
+      error: (err) => {
+        console.error('Erro ao excluir carona:', err);
+        alert('Erro ao excluir carona. Tente novamente.');
+      }
+    });
+  }
 
-  this.http.delete(`${this.baseURL}/viagem/${idViagem}`).subscribe({
-    next: () => {
-      alert('Carona excluída com sucesso!');
-      this.carregarViagens();
-    },
-    error: (err) => {
-      console.error('Erro ao excluir carona:', err);
-      alert('Erro ao excluir carona. Tente novamente.');
-    }
-  });
-}
+  // ===================== EXPORTAÇÃO (PDF / EXCEL) =====================
 
-// ===================== ADIÇÕES: Exportar PDF / Excel =====================
-
-  /** Junta caronas oferecidas e procuradas e inclui a coluna "tipo" */
-  private getCaronasParaExportar(): Array<{
-    Partida: string; Destino: string; Entrada: string; Saida: string; Ajuda: string; Tipo: string;
-  }> {
+  private getCaronasParaExportar() {
     const oferecidas = (this.caronasOferecidas || []).map(c => ({
-      Partida: c.partida,
-      Destino: c.destino,
-      Entrada: c.entrada,
-      Saida: c.saida,
-      Ajuda: String(c.ajuda ?? ''),
-      Tipo: 'Motorista'
+      Partida: c.partida, Destino: c.destino, Entrada: c.entrada,
+      Saida: c.saida, Ajuda: String(c.ajuda ?? ''), Tipo: 'Motorista'
     }));
     const procuradas = (this.caronasProcuradas || []).map(c => ({
-      Partida: c.partida,
-      Destino: c.destino,
-      Entrada: c.entrada,
-      Saida: c.saida,
-      Ajuda: String(c.ajuda ?? ''),
-      Tipo: 'Passageiro'
+      Partida: c.partida, Destino: c.destino, Entrada: c.entrada,
+      Saida: c.saida, Ajuda: String(c.ajuda ?? ''), Tipo: 'Passageiro'
     }));
     return [...oferecidas, ...procuradas];
   }
 
-  exportarPDF(): void {
+  async exportarPDF(): Promise<void> {
     const linhas = this.getCaronasParaExportar();
-    if (!linhas.length) {
-      alert('Sem caronas para exportar.');
-      return;
-    }
+    if (!linhas.length) return alert('Sem caronas para exportar.');
+
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable')
+    ]);
 
     const doc = new jsPDF('landscape', 'pt', 'a4');
     doc.setFont('helvetica', 'bold');
@@ -342,35 +278,32 @@ export class MapaComponent implements AfterViewInit, OnInit {
     const head = [['Partida', 'Destino', 'Entrada', 'Saída', 'Ajuda (R$)', 'Tipo']];
     const body = linhas.map(l => [l.Partida, l.Destino, l.Entrada, l.Saida, l.Ajuda, l.Tipo]);
 
-    autoTable(doc, {
-      head, body,
-      startY: 70,
-      theme: 'grid',
-      styles: { fontSize: 10, cellPadding: 6 },
-      headStyles: { fillColor: [43, 140, 255], textColor: 255 },
-    });
+    autoTable(doc, { head, body, startY: 70, theme: 'grid', styles: { fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [43, 140, 255], textColor: 255 } });
 
     doc.save(`caronas_${this.timestamp()}.pdf`);
   }
 
-  exportarExcel(): void {
+  async exportarExcel(): Promise<void> {
     const linhas = this.getCaronasParaExportar();
-    if (!linhas.length) {
-      alert('Sem caronas para exportar.');
-      return;
-    }
+    if (!linhas.length) return alert('Sem caronas para exportar.');
 
-    const ws = XLSX.utils.json_to_sheet(linhas);
+    const [{ utils, write }, { saveAs }] = await Promise.all([
+      import('xlsx'),
+      import('file-saver')
+    ]);
+
+    const ws = utils.json_to_sheet(linhas);
     (ws as any)['!cols'] = [
       { wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }
     ];
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Caronas');
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, 'Caronas');
 
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const wbout = write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbout], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
     });
     saveAs(blob, `caronas_${this.timestamp()}.xlsx`);
   }
@@ -378,6 +311,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
   private timestamp(): string {
     const d = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
   }
 }
