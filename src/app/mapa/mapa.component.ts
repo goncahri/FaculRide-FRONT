@@ -4,6 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { isBrowser } from '../utils/is-browser';
 
+// >>> ADIÇÕES (exportação)
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+
 @Component({
   selector: 'app-mapa',
   standalone: true,
@@ -292,4 +298,86 @@ export class MapaComponent implements AfterViewInit, OnInit {
   });
 }
 
+// ===================== ADIÇÕES: Exportar PDF / Excel =====================
+
+  /** Junta caronas oferecidas e procuradas e inclui a coluna "tipo" */
+  private getCaronasParaExportar(): Array<{
+    Partida: string; Destino: string; Entrada: string; Saida: string; Ajuda: string; Tipo: string;
+  }> {
+    const oferecidas = (this.caronasOferecidas || []).map(c => ({
+      Partida: c.partida,
+      Destino: c.destino,
+      Entrada: c.entrada,
+      Saida: c.saida,
+      Ajuda: String(c.ajuda ?? ''),
+      Tipo: 'Motorista'
+    }));
+    const procuradas = (this.caronasProcuradas || []).map(c => ({
+      Partida: c.partida,
+      Destino: c.destino,
+      Entrada: c.entrada,
+      Saida: c.saida,
+      Ajuda: String(c.ajuda ?? ''),
+      Tipo: 'Passageiro'
+    }));
+    return [...oferecidas, ...procuradas];
+  }
+
+  exportarPDF(): void {
+    const linhas = this.getCaronasParaExportar();
+    if (!linhas.length) {
+      alert('Sem caronas para exportar.');
+      return;
+    }
+
+    const doc = new jsPDF('landscape', 'pt', 'a4');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Relatório de Caronas - FaculRide', 40, 40);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 40, 58);
+
+    const head = [['Partida', 'Destino', 'Entrada', 'Saída', 'Ajuda (R$)', 'Tipo']];
+    const body = linhas.map(l => [l.Partida, l.Destino, l.Entrada, l.Saida, l.Ajuda, l.Tipo]);
+
+    autoTable(doc, {
+      head, body,
+      startY: 70,
+      theme: 'grid',
+      styles: { fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [43, 140, 255], textColor: 255 },
+    });
+
+    doc.save(`caronas_${this.timestamp()}.pdf`);
+  }
+
+  exportarExcel(): void {
+    const linhas = this.getCaronasParaExportar();
+    if (!linhas.length) {
+      alert('Sem caronas para exportar.');
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(linhas);
+    (ws as any)['!cols'] = [
+      { wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Caronas');
+
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
+    });
+    saveAs(blob, `caronas_${this.timestamp()}.xlsx`);
+  }
+
+  private timestamp(): string {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+  }
 }
