@@ -292,9 +292,14 @@ async exportarExcel(): Promise<void> {
   }
 
   try {
-    const XLSX: any = await import('xlsx');           // módulo inteiro
-    const { saveAs } = await import('file-saver');    // função nomeada
+    // Importes robustos (funcionam se vier default OU nomeado)
+    const xlsxMod: any = await import('xlsx');
+    const XLSX: any = xlsxMod?.default ?? xlsxMod;
 
+    const fsMod: any = await import('file-saver');
+    const saveAs: any = fsMod?.saveAs ?? fsMod?.default;
+
+    // Gera planilha
     const ws = XLSX.utils.json_to_sheet(linhas);
     (ws as any)['!cols'] = [
       { wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }
@@ -303,12 +308,24 @@ async exportarExcel(): Promise<void> {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Caronas');
 
+    // Escreve como array buffer
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbout], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
     });
 
-    saveAs(blob, `caronas_${this.timestamp()}.xlsx`);
+    // Baixa arquivo
+    if (typeof saveAs === 'function') {
+      saveAs(blob, `caronas_${this.timestamp()}.xlsx`);
+    } else {
+      // fallback sem file-saver
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `caronas_${this.timestamp()}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   } catch (err) {
     console.error('Erro ao exportar Excel:', err);
     alert('Falha ao exportar Excel.');
