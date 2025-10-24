@@ -8,7 +8,6 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 Chart.register(...registerables, ChartDataLabels);
 
-// Aceita os dois formatos de resposta para evitar quebra do front:
 type PublicStatsResponse = {
   usuarios?: { motoristas: number; passageiros: number };
   mediaAval?: number; // 0..5
@@ -39,13 +38,16 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
   errorMsg = '';
   avg = 0;
 
-  // NOVO: valor exibido no centro do gráfico
+  // >>> NOVOS CAMPOS USADOS NO TEMPLATE
+  stars: number[] = [1, 2, 3, 4, 5];
+  roundedAvg = 0;
+
+  // Se você removeu o label central do doughnut, pode ignorar isto:
   motoristasPercent = '0';
 
   private usuariosCounts = { motoristas: 0, passageiros: 0 };
 
   constructor(private http: HttpClient) {}
-
   ngOnInit(): void {}
 
   ngAfterViewInit(): void {
@@ -83,16 +85,17 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       this.avg = stats.mediaAval ?? stats.satisfacaoMedia ?? 0;
       if (typeof this.avg !== 'number' || isNaN(this.avg)) this.avg = 0;
       this.avg = Math.max(0, Math.min(5, this.avg));
+
+      // >>> calcula o valor usado pelas estrelas
+      this.roundedAvg = Math.round(this.avg);
     }
   }
 
   // ===================== CHART RENDER =====================
   private renderCharts() {
-    // destrói antigos (hot reload / navegação)
     this.usuariosChart?.destroy();
     this.mediaChart?.destroy();
 
-    // total e % para o label central do doughnut
     const total =
       Math.max(
         1,
@@ -104,7 +107,7 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       (this.usuariosCounts.motoristas / total) * 100
     ).toFixed(0);
 
-    // ===== 1) Doughnut Motoristas x Passageiros (com % no gráfico) =====
+    // Doughnut Motoristas x Passageiros
     this.usuariosChart = new Chart(this.usuariosChartRef.nativeElement, {
       type: 'doughnut',
       data: {
@@ -121,8 +124,8 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: true,
-        aspectRatio: 1,               // tamanhos iguais
-        cutout: '62%',                // melhora leitura do rótulo
+        aspectRatio: 1,
+        cutout: '62%',
         plugins: {
           legend: { position: 'bottom' },
           datalabels: {
@@ -138,7 +141,7 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       } as ChartConfiguration<'doughnut'>['options']
     });
 
-    // ===== 2) Gauge da média (meia-lua) com nota no centro =====
+    // Gauge da média (meia-lua) com texto central
     const centerText = {
       id: 'centerText',
       afterDraw: (chart: any) => {
@@ -171,13 +174,13 @@ export class HomeStatsComponent implements OnInit, AfterViewInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: true,
-        aspectRatio: 1,        // tamanhos iguais
-        circumference: 180,    // meia-lua
-        rotation: -90,         // começa à esquerda
+        aspectRatio: 1,
+        circumference: 180,
+        rotation: -90,
         cutout: '70%',
         plugins: {
           legend: { display: false },
-          tooltip: { enabled: false }, // sem hover; valor já aparece no centro
+          tooltip: { enabled: false },
           datalabels: { display: false }
         }
       } as ChartConfiguration<'doughnut'>['options'],
