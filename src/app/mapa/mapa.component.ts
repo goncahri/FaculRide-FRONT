@@ -284,33 +284,41 @@ export class MapaComponent implements AfterViewInit, OnInit {
     doc.save(`caronas_${this.timestamp()}.pdf`);
   }
 
-  async exportarExcel(): Promise<void> {
-    const linhas = this.getCaronasParaExportar();
-    if (!linhas.length) return alert('Sem caronas para exportar.');
+async exportarExcel(): Promise<void> {
+  const linhas = this.getCaronasParaExportar();
+  if (!linhas.length) {
+    alert('Sem caronas para exportar.');
+    return;
+  }
 
-    const [{ utils, write }, { saveAs }] = await Promise.all([
-      import('xlsx'),
-      import('file-saver')
-    ]);
+  try {
+    const XLSX: any = await import('xlsx');           // módulo inteiro
+    const { saveAs } = await import('file-saver');    // função nomeada
 
-    const ws = utils.json_to_sheet(linhas);
+    const ws = XLSX.utils.json_to_sheet(linhas);
     (ws as any)['!cols'] = [
       { wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }
     ];
 
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, 'Caronas');
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Caronas');
 
-    const wbout = write(wb, { bookType: 'xlsx', type: 'array' });
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbout], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
     });
-    saveAs(blob, `caronas_${this.timestamp()}.xlsx`);
-  }
 
-  private timestamp(): string {
-    const d = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+    saveAs(blob, `caronas_${this.timestamp()}.xlsx`);
+  } catch (err) {
+    console.error('Erro ao exportar Excel:', err);
+    alert('Falha ao exportar Excel.');
   }
+}
+
+private timestamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+
 }
