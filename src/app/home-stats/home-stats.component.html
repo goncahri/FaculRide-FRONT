@@ -14,7 +14,6 @@
       </p>
       <div class="chart-container">
         <canvas #usuariosChart></canvas>
-        <div class="chart-center-label">{{ motoristasPercent }}% Motoristas</div>
       </div>
     </div>
 
@@ -24,6 +23,17 @@
       <p class="chart-subtitle">
         Nossa comunidade tem uma das maiores notas de aprovação entre apps de carona universitária no Brasil!
       </p>
+
+      <!-- estrelas + explicação -->
+      <div class="rating">
+        <div class="stars" aria-hidden="true">
+          <span class="star" *ngFor="let s of [1,2,3,4,5]" [class.filled]="s <= Math.round(avg)">★</span>
+        </div>
+        <div class="rating-text">
+          {{ avg | number:'1.1-1' }}/5 — média das nossas avaliações das caronas
+        </div>
+      </div>
+
       <div class="chart-container">
         <canvas #mediaChart></canvas>
         <div class="chart-center-label">{{ avg | number:'1.1-1' }}/5</div>

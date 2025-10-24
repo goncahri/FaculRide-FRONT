@@ -12,12 +12,14 @@
   color: #0f172a;
 }
 
-/* Parágrafo introdutório opcional abaixo do título */
+/* Parágrafo introdutório centralizado e limitado */
 .section-intro {
   text-align: center;
   color: #475569;
   font-size: 1rem;
-  margin: 0 0 24px;
+  line-height: 1.6;
+  max-width: 820px;
+  margin: 6px auto 28px;
 }
 
 /* Grid responsivo (2 colunas no desktop) */
@@ -55,10 +57,7 @@
   text-align: center;
 }
 
-/* ===== Área do gráfico (igual para ambos) =====
-   - Use esta caixa para DOUGHNUT e GUEGE
-   - Garante formato quadrado e tamanhos idênticos
-*/
+/* ===== Área do gráfico (igual para ambos) ===== */
 :root { --chart-size: clamp(240px, 28vw, 320px); }
 
 .chart-container,
@@ -81,9 +80,48 @@
   font-size: 1.05rem;
 }
 
+/* ===== Estrelas e texto de avaliação ===== */
+.rating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.stars {
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 2px;
+}
+
+.star {
+  color: #e2e8f0; /* cinza claro (vazio) */
+}
+
+.star.filled {
+  color: #fbbf24; /* amarelo (preenchido) */
+}
+
+.rating-text {
+  color: #334155;
+  font-weight: 600;
+  font-size: .95rem;
+  text-align: center;
+}
+
 /* Mensagens de estado */
-.hint { text-align: center; color: #475569; margin-top: 12px; }
-.error { text-align: center; color: #dc2626; margin-top: 12px; }
+.hint { 
+  text-align: center; 
+  color: #475569; 
+  margin-top: 12px; 
+}
+
+.error { 
+  text-align: center; 
+  color: #dc2626; 
+  margin-top: 12px; 
+}
 
 /* Canvas ocupa a caixa 1:1 sem distorcer */
 canvas {
@@ -94,5 +132,7 @@ canvas {
 
 /* Responsivo */
 @media (max-width: 900px) {
-  .stats-grid { grid-template-columns: 1fr; }
+  .stats-grid { 
+    grid-template-columns: 1fr; 
+  }
 }
