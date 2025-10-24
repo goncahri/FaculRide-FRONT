@@ -107,12 +107,6 @@
     </button>
   </div>
 
-  <!-- Botões de Exportação -->
-<div class="botao-centro" style="margin-bottom: 20px;">
-  <button class="btn-mapa" (click)="exportarPDF()">Exportar PDF</button>
-  <button class="btn-mapa" style="background-color:#2563eb;" (click)="exportarExcel()">Exportar Excel</button>
-</div>
-
   <!-- Faixa Minhas Caronas -->
 <div class="minhas-caronas-faixa">
   <h3 class="titulo-centralizado">Minhas Caronas</h3>
@@ -146,6 +140,30 @@
     Você não tem caronas registradas.
   </div>
 </div>
+
+<!-- Caixa de exportação (fica abaixo das suas caronas) -->
+<div class="export-box" *ngIf="(caronasOferecidas?.length || 0) + (caronasProcuradas?.length || 0) > 0; else noRides">
+  <p class="export-msg">
+    💾 Quer guardar ou compartilhar? <strong>Exporte aqui</strong> a lista das suas caronas.
+  </p>
+  <div class="botao-centro export-actions">
+    <button class="btn-mapa" (click)="exportarPDF()">
+      Exportar PDF
+    </button>
+    <button class="btn-mapa primary" (click)="exportarExcel()">
+      Exportar Excel
+    </button>
+  </div>
+</div>
+
+<ng-template #noRides>
+  <div class="export-box muted">
+    <p class="export-msg">
+      Você ainda não cadastrou caronas. Assim que criar suas rotas, poderá
+      <strong>exportar em PDF ou Excel</strong> por aqui. 🚀
+    </p>
+  </div>
+</ng-template>
 
 <div class="minhas-caronas-faixa">
   <h3 class="titulo-centralizado">Minhas Avaliações</h3>
