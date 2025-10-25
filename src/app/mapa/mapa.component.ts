@@ -160,7 +160,7 @@ inicializarMapa(): void {
     }
 
     const dadosViagem = {
-      tipoUsuario: this.tipoCarona === 'oferecer' ? 'Motorista' : 'Passageiro',
+      tipoUsuario: this.tipoCarona === 'oferecer' ? 'motorista' : 'passageiro',
       partida: this.origem,
       destino: this.destino,
       horarioEntrada: this.entradaFatec,
