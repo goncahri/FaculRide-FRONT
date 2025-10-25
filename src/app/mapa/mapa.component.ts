@@ -17,6 +17,17 @@ export class MapaComponent implements AfterViewInit, OnInit {
   map!: google.maps.Map;
   directionsRenderer!: google.maps.DirectionsRenderer;
 
+  // ===== Spinner/estado de carregamento =====
+  carregando: boolean = true;
+  private _loads = { usuarios: false, viagens: false, avaliacoes: false };
+  private markLoaded(key: 'usuarios' | 'viagens' | 'avaliacoes') {
+    this._loads[key] = true;
+    if (this._loads.usuarios && this._loads.viagens && this._loads.avaliacoes) {
+      this.carregando = false;
+    }
+  }
+  // =========================================
+
   // Dados do formulário
   tipoCarona: string = 'oferecer';
   origem: string = '';
@@ -52,6 +63,10 @@ export class MapaComponent implements AfterViewInit, OnInit {
   constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
+    // mantém seu fluxo, apenas garante que o spinner começa ligado
+    this.carregando = true;
+    this._loads = { usuarios: false, viagens: false, avaliacoes: false };
+
     this.carregarUsuarios();
     this.carregarViagens();
     this.carregarAvaliacoes();
@@ -99,34 +114,44 @@ export class MapaComponent implements AfterViewInit, OnInit {
             saida: v.horarioSaida,
             ajuda: v.ajudaDeCusto
           }));
+
+        this.markLoaded('viagens');
       },
-      error: (err) => console.error('Erro ao carregar viagens:', err)
+      error: (err) => {
+        console.error('Erro ao carregar viagens:', err);
+        this.markLoaded('viagens');
+      }
     });
   }
 
-carregarUsuarios(): void {
-  this.http.get<any[]>(`${this.baseURL}/usuario`).subscribe({
-    next: (res) => {
-      this.usuarios = res;
+  carregarUsuarios(): void {
+    this.http.get<any[]>(`${this.baseURL}/usuario`).subscribe({
+      next: (res) => {
+        this.usuarios = res;
 
-      // 🔄 Reprocessa as avaliações já carregadas
-      if (this.avaliacoesRecebidas?.length) {
-        this.avaliacoesRecebidas = this.avaliacoesRecebidas.map((a: any) => ({
-          ...a,
-          nomeAvaliador: this.pegarNomeUsuario(a.ID_Avaliador),
-        }));
-      }
+        // 🔄 Reprocessa as avaliações já carregadas
+        if (this.avaliacoesRecebidas?.length) {
+          this.avaliacoesRecebidas = this.avaliacoesRecebidas.map((a: any) => ({
+            ...a,
+            nomeAvaliador: this.pegarNomeUsuario(a.ID_Avaliador),
+          }));
+        }
 
-      if (this.avaliacoesEnviadas?.length) {
-        this.avaliacoesEnviadas = this.avaliacoesEnviadas.map((a: any) => ({
-          ...a,
-          nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado),
-        }));
-      }
-    },
-    error: (err) => console.error('Erro ao carregar usuários:', err),
-  });
-}
+        if (this.avaliacoesEnviadas?.length) {
+          this.avaliacoesEnviadas = this.avaliacoesEnviadas.map((a: any) => ({
+            ...a,
+            nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado),
+          }));
+        }
+
+        this.markLoaded('usuarios');
+      },
+      error: (err) => {
+        console.error('Erro ao carregar usuários:', err);
+        this.markLoaded('usuarios');
+      },
+    });
+  }
 
   tracarRota(): void {
     if (!this.origem || !this.destino || !this.entradaFatec || !this.saidaFatec) {
@@ -227,8 +252,13 @@ carregarUsuarios(): void {
         this.avaliacoesEnviadas = res
           .filter(a => a.ID_Avaliador === this.meuId)
           .map(a => ({ ...a, nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado) }));
+
+        this.markLoaded('avaliacoes');
       },
-      error: (err) => console.error('Erro ao carregar avaliações:', err)
+      error: (err) => {
+        console.error('Erro ao carregar avaliações:', err);
+        this.markLoaded('avaliacoes');
+      }
     });
   }
 
@@ -301,58 +331,53 @@ carregarUsuarios(): void {
     doc.save(`caronas_${this.timestamp()}.pdf`);
   }
 
-async exportarExcel(): Promise<void> {
-  const linhas = this.getCaronasParaExportar();
-  if (!linhas.length) {
-    alert('Sem caronas para exportar.');
-    return;
-  }
-
-  try {
-    // Importes robustos (funcionam se vier default OU nomeado)
-    const xlsxMod: any = await import('xlsx');
-    const XLSX: any = xlsxMod?.default ?? xlsxMod;
-
-    const fsMod: any = await import('file-saver');
-    const saveAs: any = fsMod?.saveAs ?? fsMod?.default;
-
-    // Gera planilha
-    const ws = XLSX.utils.json_to_sheet(linhas);
-    (ws as any)['!cols'] = [
-      { wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Caronas');
-
-    // Escreve como array buffer
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([wbout], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
-    });
-
-    // Baixa arquivo
-    if (typeof saveAs === 'function') {
-      saveAs(blob, `caronas_${this.timestamp()}.xlsx`);
-    } else {
-      // fallback sem file-saver
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `caronas_${this.timestamp()}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
+  async exportarExcel(): Promise<void> {
+    const linhas = this.getCaronasParaExportar();
+    if (!linhas.length) {
+      alert('Sem caronas para exportar.');
+      return;
     }
-  } catch (err) {
-    console.error('Erro ao exportar Excel:', err);
-    alert('Falha ao exportar Excel.');
-  }
-}
 
-private timestamp(): string {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
-}
+    try {
+      const xlsxMod: any = await import('xlsx');
+      const XLSX: any = xlsxMod?.default ?? xlsxMod;
+
+      const fsMod: any = await import('file-saver');
+      const saveAs: any = fsMod?.saveAs ?? fsMod?.default;
+
+      const ws = XLSX.utils.json_to_sheet(linhas);
+      (ws as any)['!cols'] = [
+        { wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Caronas');
+
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
+      });
+
+      if (typeof saveAs === 'function') {
+        saveAs(blob, `caronas_${this.timestamp()}.xlsx`);
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `caronas_${this.timestamp()}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Erro ao exportar Excel:', err);
+      alert('Falha ao exportar Excel.');
+    }
+  }
+
+  private timestamp(): string {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+  }
 
 }
