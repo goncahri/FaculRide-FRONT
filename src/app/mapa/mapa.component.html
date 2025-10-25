@@ -17,7 +17,6 @@
         <label>Partida</label>
         <input type="text" [(ngModel)]="origem" name="origem" placeholder="Digite seu ponto de partida" required />
       </div>
-
       <div class="input-group flex2">
         <label>Destino</label>
         <select [(ngModel)]="destino" name="destino" required>
@@ -32,12 +31,10 @@
         <label>Horário de Entrada na Fatec</label>
         <input type="time" [(ngModel)]="entradaFatec" name="entradaFatec" required />
       </div>
-
       <div class="input-group">
         <label>Horário de Saída da Fatec</label>
         <input type="time" [(ngModel)]="saidaFatec" name="saidaFatec" required />
       </div>
-
       <div class="input-group">
         <label>Ajuda Mensal</label>
         <input type="number" [(ngModel)]="ajudaCusto" name="ajudaCusto" placeholder="Ajuda disponível (R$)" />
@@ -49,18 +46,8 @@
     </div>
   </form>
 
-  <!-- Mapa SEMPRE no DOM + overlay de carregamento -->
-  <div class="mapa-wrapper">
-    <div #mapContainer id="mapa" class="mapa-container"></div>
-
-    <!-- overlay que só aparece enquanto carrega -->
-    <div *ngIf="carregando" class="loading-overlay">
-      <div class="loading-box">
-        <div class="spinner"></div>
-        <p>Carregando suas caronas…</p>
-      </div>
-    </div>
-  </div>
+  <!-- Mapa -->
+  <div #mapContainer id="mapa" class="mapa-container"></div>
 
   <!-- Faixa Caronas Disponíveis -->
   <div class="caronas-disponiveis-faixa">
@@ -68,8 +55,8 @@
     <div class="caronas-disponiveis-lista">
       <div *ngFor="let viagem of viagens" class="carona-card">
         <img [src]="obterFotoUsuario(viagem.usuario?.email, viagem.usuario?.genero)" alt="Foto" class="carona-foto" />
-
         <div class="carona-info">
+
           <!-- Botão excluir -->
           <div *ngIf="viagem.idUsuario === meuId" class="excluir-carona">
             <button (click)="excluirCarona(viagem.idViagem)">🗑️ Excluir Carona</button>
@@ -82,7 +69,6 @@
           <p>Entrada: {{ viagem.horarioEntrada }}</p>
           <p>Saída: {{ viagem.horarioSaida }}</p>
           <p>Ajuda Mensal: R$ {{ viagem.ajudaDeCusto }}</p>
-
           <button (click)="mostrarRota(viagem.partida, viagem.destino)">Ver rota</button>
           <a (click)="abrirWhatsapp(viagem.usuario?.nome, viagem.idUsuario, viagem.usuario?.telefone)">
             <img src="assets/whats1.png" class="whatsapp-icon" alt="WhatsApp">
@@ -106,15 +92,8 @@
       </label>
     </div>
 
-    <textarea
-      [(ngModel)]="comentarioAvaliacao"
-      name="comentario"
-      rows="3"
-      placeholder="Deixe seu comentário sobre a carona"></textarea>
-
-    <button (click)="enviarAvaliacao()" class="btn-enviar">
-      Enviar Avaliação
-    </button>
+    <textarea [(ngModel)]="comentarioAvaliacao" name="comentario" rows="3" placeholder="Deixe seu comentário sobre a carona"></textarea>
+    <button (click)="enviarAvaliacao()" class="btn-enviar">Enviar Avaliação</button>
   </div>
 
   <!-- Faixa Minhas Caronas -->
@@ -165,8 +144,7 @@
   <ng-template #noRides>
     <div class="export-box muted">
       <p class="export-msg">
-        Você ainda não cadastrou caronas. Assim que criar suas rotas, poderá
-        <strong>exportar em PDF ou Excel</strong> por aqui. 🚀
+        Você ainda não cadastrou caronas. Assim que criar suas rotas, poderá <strong>exportar em PDF ou Excel</strong> por aqui. 🚀
       </p>
     </div>
   </ng-template>
