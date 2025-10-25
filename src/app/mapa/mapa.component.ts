@@ -104,12 +104,29 @@ export class MapaComponent implements AfterViewInit, OnInit {
     });
   }
 
-  carregarUsuarios(): void {
-    this.http.get<any[]>(`${this.baseURL}/usuario`).subscribe({
-      next: (res) => (this.usuarios = res),
-      error: (err) => console.error('Erro ao carregar usuários:', err)
-    });
-  }
+carregarUsuarios(): void {
+  this.http.get<any[]>(`${this.baseURL}/usuario`).subscribe({
+    next: (res) => {
+      this.usuarios = res;
+
+      // 🔄 Reprocessa as avaliações já carregadas
+      if (this.avaliacoesRecebidas?.length) {
+        this.avaliacoesRecebidas = this.avaliacoesRecebidas.map((a: any) => ({
+          ...a,
+          nomeAvaliador: this.pegarNomeUsuario(a.ID_Avaliador),
+        }));
+      }
+
+      if (this.avaliacoesEnviadas?.length) {
+        this.avaliacoesEnviadas = this.avaliacoesEnviadas.map((a: any) => ({
+          ...a,
+          nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado),
+        }));
+      }
+    },
+    error: (err) => console.error('Erro ao carregar usuários:', err),
+  });
+}
 
   tracarRota(): void {
     if (!this.origem || !this.destino || !this.entradaFatec || !this.saidaFatec) {
