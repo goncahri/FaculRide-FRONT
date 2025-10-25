@@ -12,7 +12,7 @@ import { isBrowser } from '../utils/is-browser';
   styleUrls: ['./mapa.component.css']
 })
 export class MapaComponent implements AfterViewInit, OnInit {
-  @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
+  @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef<HTMLDivElement>;
 
   map!: google.maps.Map;
   directionsRenderer!: google.maps.DirectionsRenderer;
@@ -76,19 +76,19 @@ export class MapaComponent implements AfterViewInit, OnInit {
     this.inicializarMapa();
   }
 
-  inicializarMapa(): void {
-    if (isBrowser()) {
-      const mapOptions = {
-        center: new google.maps.LatLng(-23.5015, -47.4526),
-        zoom: 12,
-        mapTypeId: google.maps.MapTypeId.ROADMAP
-      };
+inicializarMapa(): void {
+  if (!isBrowser() || !this.mapContainer?.nativeElement) return;  // <— guarda
 
-      this.map = new google.maps.Map(this.mapContainer.nativeElement, mapOptions);
-      this.directionsRenderer = new google.maps.DirectionsRenderer();
-      this.directionsRenderer.setMap(this.map);
-    }
-  }
+  const mapOptions = {
+    center: new google.maps.LatLng(-23.5015, -47.4526),
+    zoom: 12,
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  };
+
+  this.map = new google.maps.Map(this.mapContainer.nativeElement, mapOptions);
+  this.directionsRenderer = new google.maps.DirectionsRenderer();
+  this.directionsRenderer.setMap(this.map);
+}
 
   carregarViagens(): void {
     this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
