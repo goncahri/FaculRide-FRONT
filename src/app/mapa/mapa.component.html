@@ -1,205 +1,201 @@
 <section class="mapa-section">
+  <h2>Planeje sua Carona</h2>
 
-  <!-- SPINNER (apenas adicionando) -->
-  <div *ngIf="carregando" class="carregando-overlay">
-    <div class="spinner"></div>
-    <p>Carregando suas caronas…</p>
+  <!-- Seletor -->
+  <div class="tipo-carona">
+    <label for="tipoCarona">O que você procura?</label>
+    <select id="tipoCarona" [(ngModel)]="tipoCarona" name="tipoCarona">
+      <option value="oferecer">Oferecer carona</option>
+      <option value="procurar">Procurar carona</option>
+    </select>
   </div>
 
-  <!-- Tudo que já existia fica visível quando terminar de carregar -->
-  <ng-container *ngIf="!carregando">
-    <h2>Planeje sua Carona</h2>
+  <!-- Formulário -->
+  <form (ngSubmit)="tracarRota()" class="mapa-form-layout">
+    <div class="linha-horizontal">
+      <div class="input-group flex2">
+        <label>Partida</label>
+        <input type="text" [(ngModel)]="origem" name="origem" placeholder="Digite seu ponto de partida" required />
+      </div>
 
-    <!-- Seletor -->
-    <div class="tipo-carona">
-      <label for="tipoCarona">O que você procura?</label>
-      <select id="tipoCarona" [(ngModel)]="tipoCarona" name="tipoCarona">
-        <option value="oferecer">Oferecer carona</option>
-        <option value="procurar">Procurar carona</option>
-      </select>
+      <div class="input-group flex2">
+        <label>Destino</label>
+        <select [(ngModel)]="destino" name="destino" required>
+          <option value="">Selecione o destino</option>
+          <option value="FATEC Votorantim">FATEC Votorantim</option>
+        </select>
+      </div>
     </div>
 
-    <!-- Formulário -->
-    <form (ngSubmit)="tracarRota()" class="mapa-form-layout">
-      <div class="linha-horizontal">
-        <div class="input-group flex2">
-          <label>Partida</label>
-          <input type="text" [(ngModel)]="origem" name="origem" placeholder="Digite seu ponto de partida" required />
-        </div>
-
-        <div class="input-group flex2">
-          <label>Destino</label>
-          <select [(ngModel)]="destino" name="destino" required>
-            <option value="">Selecione o destino</option>
-            <option value="FATEC Votorantim">FATEC Votorantim</option>
-          </select>
-        </div>
+    <div class="linha-horizontal">
+      <div class="input-group">
+        <label>Horário de Entrada na Fatec</label>
+        <input type="time" [(ngModel)]="entradaFatec" name="entradaFatec" required />
       </div>
 
-      <div class="linha-horizontal">
-        <div class="input-group">
-          <label>Horário de Entrada na Fatec</label>
-          <input type="time" [(ngModel)]="entradaFatec" name="entradaFatec" required />
-        </div>
-
-        <div class="input-group">
-          <label>Horário de Saída da Fatec</label>
-          <input type="time" [(ngModel)]="saidaFatec" name="saidaFatec" required />
-        </div>
-
-        <div class="input-group">
-          <label>Ajuda Mensal</label>
-          <input type="number" [(ngModel)]="ajudaCusto" name="ajudaCusto" placeholder="Ajuda disponível (R$)" />
-        </div>
+      <div class="input-group">
+        <label>Horário de Saída da Fatec</label>
+        <input type="time" [(ngModel)]="saidaFatec" name="saidaFatec" required />
       </div>
 
-      <div class="botao-centro">
-        <button type="submit" class="btn-mapa">Cadastrar Rota</button>
+      <div class="input-group">
+        <label>Ajuda Mensal</label>
+        <input type="number" [(ngModel)]="ajudaCusto" name="ajudaCusto" placeholder="Ajuda disponível (R$)" />
       </div>
-    </form>
+    </div>
 
-    <!-- Mapa -->
+    <div class="botao-centro">
+      <button type="submit" class="btn-mapa">Cadastrar Rota</button>
+    </div>
+  </form>
+
+  <!-- Mapa SEMPRE no DOM + overlay de carregamento -->
+  <div class="mapa-wrapper">
     <div #mapContainer id="mapa" class="mapa-container"></div>
 
-    <!-- Faixa Caronas Disponíveis -->
-    <div class="caronas-disponiveis-faixa">
-      <h3 class="titulo-centralizado">Caronas Disponíveis</h3>
-      <div class="caronas-disponiveis-lista">
-        <div *ngFor="let viagem of viagens" class="carona-card">
-          <img [src]="obterFotoUsuario(viagem.usuario?.email, viagem.usuario?.genero)" alt="Foto" class="carona-foto" />
+    <!-- overlay que só aparece enquanto carrega -->
+    <div *ngIf="carregando" class="loading-overlay">
+      <div class="loading-box">
+        <div class="spinner"></div>
+        <p>Carregando suas caronas…</p>
+      </div>
+    </div>
+  </div>
 
-          <div class="carona-info">
-            <!-- Botão excluir -->
-            <div *ngIf="viagem.idUsuario === meuId" class="excluir-carona">
-              <button (click)="excluirCarona(viagem.idViagem)">🗑️ Excluir Carona</button>
-            </div>
+  <!-- Faixa Caronas Disponíveis -->
+  <div class="caronas-disponiveis-faixa">
+    <h3 class="titulo-centralizado">Caronas Disponíveis</h3>
+    <div class="caronas-disponiveis-lista">
+      <div *ngFor="let viagem of viagens" class="carona-card">
+        <img [src]="obterFotoUsuario(viagem.usuario?.email, viagem.usuario?.genero)" alt="Foto" class="carona-foto" />
 
-            <strong>{{ viagem.usuario?.nome || 'Usuário' }}</strong>
-            <p>{{ viagem.tipoUsuario }}</p>
-            <p>Partida: {{ viagem.partida }}</p>
-            <p>Destino: {{ viagem.destino }}</p>
-            <p>Entrada: {{ viagem.horarioEntrada }}</p>
-            <p>Saída: {{ viagem.horarioSaida }}</p>
-            <p>Ajuda Mensal: R$ {{ viagem.ajudaDeCusto }}</p>
-
-            <button (click)="mostrarRota(viagem.partida, viagem.destino)">Ver rota</button>
-            <a (click)="abrirWhatsapp(viagem.usuario?.nome, viagem.idUsuario, viagem.usuario?.telefone)">
-              <img src="assets/whats1.png" class="whatsapp-icon" alt="WhatsApp">
-              Entrar em contato
-            </a>
+        <div class="carona-info">
+          <!-- Botão excluir -->
+          <div *ngIf="viagem.idUsuario === meuId" class="excluir-carona">
+            <button (click)="excluirCarona(viagem.idViagem)">🗑️ Excluir Carona</button>
           </div>
+
+          <strong>{{ viagem.usuario?.nome || 'Usuário' }}</strong>
+          <p>{{ viagem.tipoUsuario }}</p>
+          <p>Partida: {{ viagem.partida }}</p>
+          <p>Destino: {{ viagem.destino }}</p>
+          <p>Entrada: {{ viagem.horarioEntrada }}</p>
+          <p>Saída: {{ viagem.horarioSaida }}</p>
+          <p>Ajuda Mensal: R$ {{ viagem.ajudaDeCusto }}</p>
+
+          <button (click)="mostrarRota(viagem.partida, viagem.destino)">Ver rota</button>
+          <a (click)="abrirWhatsapp(viagem.usuario?.nome, viagem.idUsuario, viagem.usuario?.telefone)">
+            <img src="assets/whats1.png" class="whatsapp-icon" alt="WhatsApp">
+            Entrar em contato
+          </a>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Box Avaliação -->
-    <div *ngIf="mostrarAvaliacao" class="avaliacao-box">
-      <h3>⭐ Avaliar carona com {{ nomeUsuarioSelecionado }}</h3>
-      <p class="subtexto-avaliacao">Avalie de 1 a 5 ⭐</p>
+  <!-- Box Avaliação -->
+  <div *ngIf="mostrarAvaliacao" class="avaliacao-box">
+    <h3>⭐ Avaliar carona com {{ nomeUsuarioSelecionado }}</h3>
+    <p class="subtexto-avaliacao">Avalie de 1 a 5 ⭐</p>
 
-      <div class="estrelas">
-        <label *ngFor="let nota of [5,4,3,2,1]">
-          <input type="radio" name="avaliacao" [value]="nota" [(ngModel)]="avaliacaoSelecionada" />
-          <span class="estrela">&#9733;</span>
-          <div class="numero-estrela">{{ nota }}</div>
-        </label>
-      </div>
-
-      <textarea 
-        [(ngModel)]="comentarioAvaliacao" 
-        name="comentario" 
-        rows="3" 
-        placeholder="Deixe seu comentário sobre a carona"></textarea>
-
-      <button (click)="enviarAvaliacao()" class="btn-enviar">
-        Enviar Avaliação
-      </button>
+    <div class="estrelas">
+      <label *ngFor="let nota of [5,4,3,2,1]">
+        <input type="radio" name="avaliacao" [value]="nota" [(ngModel)]="avaliacaoSelecionada" />
+        <span class="estrela">&#9733;</span>
+        <div class="numero-estrela">{{ nota }}</div>
+      </label>
     </div>
 
-    <!-- Faixa Minhas Caronas -->
-    <div class="minhas-caronas-faixa">
-      <h3 class="titulo-centralizado">Minhas Caronas</h3>
+    <textarea
+      [(ngModel)]="comentarioAvaliacao"
+      name="comentario"
+      rows="3"
+      placeholder="Deixe seu comentário sobre a carona"></textarea>
 
-      <!-- Caronas Oferecidas -->
-      <div *ngIf="caronasOferecidas.length > 0">
-        <h4 style="color:white;">Caronas Oferecidas</h4>
-        <div *ngFor="let c of caronasOferecidas" class="avaliacoes-bloco">
-          <p><strong>Partida:</strong> {{ c.partida }}</p>
-          <p><strong>Destino:</strong> {{ c.destino }}</p>
-          <p><strong>Entrada:</strong> {{ c.entrada }}</p>
-          <p><strong>Saída:</strong> {{ c.saida }}</p>
-          <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
-        </div>
-      </div>
+    <button (click)="enviarAvaliacao()" class="btn-enviar">
+      Enviar Avaliação
+    </button>
+  </div>
 
-      <!-- Caronas Procuradas -->
-      <div *ngIf="caronasProcuradas.length > 0">
-        <h4 style="color:white;">Caronas Procuradas</h4>
-        <div *ngFor="let c of caronasProcuradas" class="avaliacoes-bloco">
-          <p><strong>Partida:</strong> {{ c.partida }}</p>
-          <p><strong>Destino:</strong> {{ c.destino }}</p>
-          <p><strong>Entrada:</strong> {{ c.entrada }}</p>
-          <p><strong>Saída:</strong> {{ c.saida }}</p>
-          <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
-        </div>
-      </div>
+  <!-- Faixa Minhas Caronas -->
+  <div class="minhas-caronas-faixa">
+    <h3 class="titulo-centralizado">Minhas Caronas</h3>
 
-      <!-- Mensagem caso não tenha caronas -->
-      <div *ngIf="caronasOferecidas.length === 0 && caronasProcuradas.length === 0" style="color:white;">
-        Você não tem caronas registradas.
+    <!-- Caronas Oferecidas -->
+    <div *ngIf="caronasOferecidas.length > 0">
+      <h4 style="color:white;">Caronas Oferecidas</h4>
+      <div *ngFor="let c of caronasOferecidas" class="avaliacoes-bloco">
+        <p><strong>Partida:</strong> {{ c.partida }}</p>
+        <p><strong>Destino:</strong> {{ c.destino }}</p>
+        <p><strong>Entrada:</strong> {{ c.entrada }}</p>
+        <p><strong>Saída:</strong> {{ c.saida }}</p>
+        <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
       </div>
     </div>
 
-    <!-- Caixa de exportação (fica abaixo das suas caronas) -->
-    <div class="export-box" *ngIf="(caronasOferecidas?.length || 0) + (caronasProcuradas?.length || 0) > 0; else noRides">
+    <!-- Caronas Procuradas -->
+    <div *ngIf="caronasProcuradas.length > 0">
+      <h4 style="color:white;">Caronas Procuradas</h4>
+      <div *ngFor="let c of caronasProcuradas" class="avaliacoes-bloco">
+        <p><strong>Partida:</strong> {{ c.partida }}</p>
+        <p><strong>Destino:</strong> {{ c.destino }}</p>
+        <p><strong>Entrada:</strong> {{ c.entrada }}</p>
+        <p><strong>Saída:</strong> {{ c.saida }}</p>
+        <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
+      </div>
+    </div>
+
+    <!-- Mensagem caso não tenha caronas -->
+    <div *ngIf="caronasOferecidas.length === 0 && caronasProcuradas.length === 0" style="color:white;">
+      Você não tem caronas registradas.
+    </div>
+  </div>
+
+  <!-- Caixa de exportação -->
+  <div class="export-box" *ngIf="(caronasOferecidas?.length || 0) + (caronasProcuradas?.length || 0) > 0; else noRides">
+    <p class="export-msg">
+      💾 Quer guardar ou compartilhar? <strong>Exporte aqui</strong> a lista das suas caronas.
+    </p>
+    <div class="botao-centro export-actions">
+      <button class="btn-mapa" (click)="exportarPDF()">Exportar PDF</button>
+      <button class="btn-mapa primary" (click)="exportarExcel()">Exportar Excel</button>
+    </div>
+  </div>
+
+  <ng-template #noRides>
+    <div class="export-box muted">
       <p class="export-msg">
-        💾 Quer guardar ou compartilhar? <strong>Exporte aqui</strong> a lista das suas caronas.
+        Você ainda não cadastrou caronas. Assim que criar suas rotas, poderá
+        <strong>exportar em PDF ou Excel</strong> por aqui. 🚀
       </p>
-      <div class="botao-centro export-actions">
-        <button class="btn-mapa" (click)="exportarPDF()">
-          Exportar PDF
-        </button>
-        <button class="btn-mapa primary" (click)="exportarExcel()">
-          Exportar Excel
-        </button>
+    </div>
+  </ng-template>
+
+  <div class="minhas-caronas-faixa">
+    <h3 class="titulo-centralizado">Minhas Avaliações</h3>
+
+    <!-- Avaliações Recebidas -->
+    <div *ngIf="avaliacoesRecebidas.length > 0">
+      <h4 style="color:white;">Avaliações Recebidas</h4>
+      <div *ngFor="let a of avaliacoesRecebidas" class="avaliacoes-bloco">
+        <p><strong>De:</strong> {{ a.nomeAvaliador }}</p>
+        <p><strong>Nota:</strong> ⭐ {{ a.Estrelas }}</p>
+        <p><strong>Comentário:</strong> {{ a.Comentario }}</p>
       </div>
     </div>
 
-    <ng-template #noRides>
-      <div class="export-box muted">
-        <p class="export-msg">
-          Você ainda não cadastrou caronas. Assim que criar suas rotas, poderá
-          <strong>exportar em PDF ou Excel</strong> por aqui. 🚀
-        </p>
-      </div>
-    </ng-template>
-
-    <div class="minhas-caronas-faixa">
-      <h3 class="titulo-centralizado">Minhas Avaliações</h3>
-
-      <!-- Avaliações Recebidas -->
-      <div *ngIf="avaliacoesRecebidas.length > 0">
-        <h4 style="color:white;">Avaliações Recebidas</h4>
-        <div *ngFor="let a of avaliacoesRecebidas" class="avaliacoes-bloco">
-          <p><strong>De:</strong> {{ a.nomeAvaliador }}</p>
-          <p><strong>Nota:</strong> ⭐ {{ a.Estrelas }}</p>
-          <p><strong>Comentário:</strong> {{ a.Comentario }}</p>
-        </div>
-      </div>
-
-      <!-- Avaliações Enviadas -->
-      <div *ngIf="avaliacoesEnviadas.length > 0">
-        <h4 style="color:white;">Avaliações Enviadas</h4>
-        <div *ngFor="let a of avaliacoesEnviadas" class="avaliacoes-bloco">
-          <p><strong>Para:</strong> {{ a.nomeAvaliado }}</p>
-          <p><strong>Nota:</strong> ⭐ {{ a.Estrelas }}</p>
-          <p><strong>Comentário:</strong> {{ a.Comentario }}</p>
-        </div>
-      </div>
-
-      <div *ngIf="avaliacoesRecebidas.length === 0 && avaliacoesEnviadas.length === 0" style="color:white;">
-        Você não tem avaliações registradas.
+    <!-- Avaliações Enviadas -->
+    <div *ngIf="avaliacoesEnviadas.length > 0">
+      <h4 style="color:white;">Avaliações Enviadas</h4>
+      <div *ngFor="let a of avaliacoesEnviadas" class="avaliacoes-bloco">
+        <p><strong>Para:</strong> {{ a.nomeAvaliado }}</p>
+        <p><strong>Nota:</strong> ⭐ {{ a.Estrelas }}</p>
+        <p><strong>Comentário:</strong> {{ a.Comentario }}</p>
       </div>
     </div>
-  </ng-container>
+
+    <div *ngIf="avaliacoesRecebidas.length === 0 && avaliacoesEnviadas.length === 0" style="color:white;">
+      Você não tem avaliações registradas.
+    </div>
+  </div>
 </section>
