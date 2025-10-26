@@ -13,6 +13,7 @@ import { isBrowser } from '../utils/is-browser';
 })
 export class MapaComponent implements AfterViewInit, OnInit {
   @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
+
   map!: google.maps.Map;
   directionsRenderer!: google.maps.DirectionsRenderer;
 
@@ -35,21 +36,17 @@ export class MapaComponent implements AfterViewInit, OnInit {
   idUsuarioSelecionado: number | null = null;
   avaliacaoSelecionada: number = 0;
   comentarioAvaliacao: string = '';
+
   avaliacoesRecebidas: any[] = [];
   avaliacoesEnviadas: any[] = [];
-
   usuarios: any[] = [];
 
   // Configuração da API
-  baseURL =
-    isBrowser() && window.location.hostname.includes('localhost')
-      ? 'http://localhost:3000/api'
-      : 'https://projeto-faculride.onrender.com/api';
+  baseURL = isBrowser() && window.location.hostname.includes('localhost')
+    ? 'http://localhost:3000/api'
+    : 'https://projeto-faculride.onrender.com/api';
 
-  usuarioLogado = isBrowser()
-    ? JSON.parse(localStorage.getItem('usuarioLogado') || '{}')
-    : {};
-
+  usuarioLogado = isBrowser() ? JSON.parse(localStorage.getItem('usuarioLogado') || '{}') : {};
   meuId = this.usuarioLogado.idUsuario || this.usuarioLogado.id;
 
   constructor(private http: HttpClient) {}
@@ -71,6 +68,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
         zoom: 12,
         mapTypeId: google.maps.MapTypeId.ROADMAP
       };
+
       this.map = new google.maps.Map(this.mapContainer.nativeElement, mapOptions);
       this.directionsRenderer = new google.maps.DirectionsRenderer();
       this.directionsRenderer.setMap(this.map);
@@ -78,52 +76,44 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   carregarViagens(): void {
-    this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
-      next: (res) => {
-        this.viagens = res;
-        this.caronasOferecidas = this.viagens
-          .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'motorista')
-          .map(v => ({
-            partida: v.partida,
-            destino: v.destino,
-            entrada: v.horarioEntrada,
-            saida: v.horarioSaida,
-            ajuda: v.ajudaDeCusto
-          }));
-        this.caronasProcuradas = this.viagens
-          .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'passageiro')
-          .map(v => ({
-            partida: v.partida,
-            destino: v.destino,
-            entrada: v.horarioEntrada,
-            saida: v.horarioSaida,
-            ajuda: v.ajudaDeCusto
-          }));
-      },
-      error: (err) => console.error('Erro ao carregar viagens:', err)
-    });
-  }
+  this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
+    next: (res) => {
+      this.viagens = res;
+
+      this.caronasOferecidas = this.viagens
+        .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'Motorista')
+        .map(v => ({
+          partida: v.partida,
+          destino: v.destino,
+          entrada: v.horarioEntrada,
+          saida: v.horarioSaida,
+          ajuda: v.ajudaDeCusto
+        }));
+
+      this.caronasProcuradas = this.viagens
+        .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'Passageiro')
+        .map(v => ({
+          partida: v.partida,
+          destino: v.destino,
+          entrada: v.horarioEntrada,
+          saida: v.horarioSaida,
+          ajuda: v.ajudaDeCusto
+        }));
+    },
+    error: (err) => {
+      console.error('Erro ao carregar viagens:', err);
+    }
+  });
+}
 
   carregarUsuarios(): void {
     this.http.get<any[]>(`${this.baseURL}/usuario`).subscribe({
       next: (res) => {
         this.usuarios = res;
-
-        if (this.avaliacoesRecebidas?.length) {
-          this.avaliacoesRecebidas = this.avaliacoesRecebidas.map((a: any) => ({
-            ...a,
-            nomeAvaliador: this.pegarNomeUsuario(a.ID_Avaliador)
-          }));
-        }
-
-        if (this.avaliacoesEnviadas?.length) {
-          this.avaliacoesEnviadas = this.avaliacoesEnviadas.map((a: any) => ({
-            ...a,
-            nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado)
-          }));
-        }
       },
-      error: (err) => console.error('Erro ao carregar usuários:', err)
+      error: (err) => {
+        console.error('Erro ao carregar usuários:', err);
+      }
     });
   }
 
@@ -139,7 +129,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
       destino: this.destino,
       horarioEntrada: this.entradaFatec,
       horarioSaida: this.saidaFatec,
-      ajudaDeCusto: this.ajudaCusto ? this.ajudaCusto.toString() : '0',
+      ajudaDeCusto: this.ajudaCusto ? this.ajudaCusto.toString() : "0",
       idUsuario: this.meuId
     };
 
@@ -160,35 +150,56 @@ export class MapaComponent implements AfterViewInit, OnInit {
         destination: this.destino,
         travelMode: google.maps.TravelMode.DRIVING
       };
+
       const directionsService = new google.maps.DirectionsService();
+
       directionsService.route(request, (result, status) => {
-        if (status === 'OK' && result) this.directionsRenderer.setDirections(result);
+        if (status === 'OK' && result) {
+          this.directionsRenderer.setDirections(result);
+        } else {
+          console.error('Erro ao traçar rota:', status);
+        }
       });
     }
   }
 
   mostrarRota(partida: string, destino: string): void {
     if (isBrowser()) {
-      const directionsService = new google.maps.DirectionsService();
       const request: google.maps.DirectionsRequest = {
         origin: partida,
         destination: destino,
         travelMode: google.maps.TravelMode.DRIVING
       };
+
+      const directionsService = new google.maps.DirectionsService();
+
       directionsService.route(request, (result, status) => {
-        if (status === 'OK' && result) this.directionsRenderer.setDirections(result);
+        if (status === 'OK' && result) {
+          this.directionsRenderer.setDirections(result);
+        } else {
+          console.error('Erro ao traçar rota:', status);
+        }
       });
-      setTimeout(() =>
-        this.mapContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+
+      setTimeout(() => {
+        this.mapContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
     }
   }
 
   abrirWhatsapp(nome: string, idUsuario: number, numeroWhatsapp: string) {
-    if (!numeroWhatsapp) return alert('Número de WhatsApp não disponível');
-    if (isBrowser()) window.open(`https://wa.me/${numeroWhatsapp}`, '_blank');
+    if (!numeroWhatsapp) {
+      alert('Número de WhatsApp não disponível');
+      return;
+    }
+
+    if (isBrowser()) {
+      window.open(`https://wa.me/${numeroWhatsapp}`, '_blank');
+    }
 
     setTimeout(() => {
-      if (confirm(`A carona com ${nome} foi realizada? Deseja avaliar?`)) {
+      const confirmado = confirm(`A carona com ${nome} foi realizada? Deseja avaliar?`);
+      if (confirmado) {
         this.nomeUsuarioSelecionado = nome;
         this.idUsuarioSelecionado = idUsuario;
         this.mostrarAvaliacao = true;
@@ -197,7 +208,10 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   enviarAvaliacao() {
-    if (!this.avaliacaoSelecionada) return alert('Por favor, selecione uma nota.');
+    if (!this.avaliacaoSelecionada) {
+      alert('Por favor, selecione uma nota.');
+      return;
+    }
 
     const avaliacao = {
       ID_Avaliador: this.meuId,
@@ -226,13 +240,21 @@ export class MapaComponent implements AfterViewInit, OnInit {
       next: (res) => {
         this.avaliacoesRecebidas = res
           .filter(a => a.ID_Avaliado === this.meuId)
-          .map(a => ({ ...a, nomeAvaliador: this.pegarNomeUsuario(a.ID_Avaliador) }));
+          .map(a => ({
+            ...a,
+            nomeAvaliador: this.pegarNomeUsuario(a.ID_Avaliador)
+          }));
 
         this.avaliacoesEnviadas = res
           .filter(a => a.ID_Avaliador === this.meuId)
-          .map(a => ({ ...a, nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado) }));
+          .map(a => ({
+            ...a,
+            nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado)
+          }));
       },
-      error: (err) => console.error('Erro ao carregar avaliações:', err)
+      error: (err) => {
+        console.error('Erro ao carregar avaliações:', err);
+      }
     });
   }
 
@@ -242,128 +264,32 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   obterFotoUsuario(email: string, genero: any): string {
-    const u = this.usuarios.find(x => x?.email?.trim().toLowerCase() === (email || '').trim().toLowerCase());
+    const u = this.usuarios.find(
+      (x) => x?.email?.trim().toLowerCase() === (email || '').trim().toLowerCase()
+    );
+
     const url = u?.foto || u?.fotoUrl;
     if (url) return url;
+
     if (genero === true) return 'assets/profile_man.jpeg';
     if (genero === false) return 'assets/profile_woman.jpeg';
     return 'assets/usuario.png';
   }
 
   excluirCarona(idViagem: number) {
-    if (!confirm('Tem certeza que deseja excluir esta carona?')) return;
+  const confirmacao = confirm('Tem certeza que deseja excluir esta carona?');
+  if (!confirmacao) return;
 
-    this.http.delete(`${this.baseURL}/viagem/${idViagem}`).subscribe({
-      next: () => {
-        alert('Carona excluída com sucesso!');
-        this.carregarViagens();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir carona:', err);
-        alert('Erro ao excluir carona. Tente novamente.');
-      }
-    });
-  }
-
-  // ===================== EXPORTAÇÃO (PDF / EXCEL) =====================
-
-  private getCaronasParaExportar() {
-    const oferecidas = (this.caronasOferecidas || []).map(c => ({
-      Partida: c.partida,
-      Destino: c.destino,
-      Entrada: c.entrada,
-      Saída: c.saida,
-      Ajuda: String(c.ajuda ?? ''),
-      Tipo: 'Motorista'
-    }));
-
-    const procuradas = (this.caronasProcuradas || []).map(c => ({
-      Partida: c.partida,
-      Destino: c.destino,
-      Entrada: c.entrada,
-      Saída: c.saida,
-      Ajuda: String(c.ajuda ?? ''),
-      Tipo: 'Passageiro'
-    }));
-
-    return [...oferecidas, ...procuradas];
-  }
-
-  async exportarPDF(): Promise<void> {
-    const linhas = this.getCaronasParaExportar();
-    if (!linhas.length) return alert('Sem caronas para exportar.');
-
-    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-      import('jspdf'),
-      import('jspdf-autotable')
-    ]);
-
-    const doc = new jsPDF('landscape', 'pt', 'a4');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.text('Relatório de Caronas - FaculRide', 40, 40);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 40, 58);
-
-    const head = [['Partida', 'Destino', 'Entrada', 'Saída', 'Ajuda (R$)', 'Tipo']];
-    const body = linhas.map(l => [l.Partida, l.Destino, l.Entrada, l.Saída, l.Ajuda, l.Tipo]);
-
-    autoTable(doc, {
-      head,
-      body,
-      startY: 70,
-      theme: 'grid',
-      styles: { fontSize: 10, cellPadding: 6 },
-      headStyles: { fillColor: [43, 140, 255], textColor: 255 }
-    });
-
-    doc.save(`caronas_${this.timestamp()}.pdf`);
-  }
-
-  async exportarExcel(): Promise<void> {
-    const linhas = this.getCaronasParaExportar();
-    if (!linhas.length) return alert('Sem caronas para exportar.');
-
-    try {
-      const xlsxMod: any = await import('xlsx');
-      const XLSX: any = xlsxMod?.default ?? xlsxMod;
-      const fsMod: any = await import('file-saver');
-      const saveAs: any = fsMod?.saveAs ?? fsMod?.default;
-
-      const ws = XLSX.utils.json_to_sheet(linhas);
-      (ws as any)['!cols'] = [
-        { wch: 20 }, { wch: 20 }, { wch: 12 },
-        { wch: 12 }, { wch: 14 }, { wch: 12 }
-      ];
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Caronas');
-
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
-      });
-
-      if (typeof saveAs === 'function') {
-        saveAs(blob, `caronas_${this.timestamp()}.xlsx`);
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `caronas_${this.timestamp()}.xlsx`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    } catch (err) {
-      console.error('Erro ao exportar Excel:', err);
-      alert('Falha ao exportar Excel.');
+  this.http.delete(`${this.baseURL}/viagem/${idViagem}`).subscribe({
+    next: () => {
+      alert('Carona excluída com sucesso!');
+      this.carregarViagens();
+    },
+    error: (err) => {
+      console.error('Erro ao excluir carona:', err);
+      alert('Erro ao excluir carona. Tente novamente.');
     }
-  }
+  });
+}
 
-  private timestamp(): string {
-    const d = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
-  }
 }

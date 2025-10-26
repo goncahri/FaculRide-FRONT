@@ -17,6 +17,7 @@
         <label>Partida</label>
         <input type="text" [(ngModel)]="origem" name="origem" placeholder="Digite seu ponto de partida" required />
       </div>
+
       <div class="input-group flex2">
         <label>Destino</label>
         <select [(ngModel)]="destino" name="destino" required>
@@ -31,10 +32,12 @@
         <label>Horário de Entrada na Fatec</label>
         <input type="time" [(ngModel)]="entradaFatec" name="entradaFatec" required />
       </div>
+
       <div class="input-group">
         <label>Horário de Saída da Fatec</label>
         <input type="time" [(ngModel)]="saidaFatec" name="saidaFatec" required />
       </div>
+
       <div class="input-group">
         <label>Ajuda Mensal</label>
         <input type="number" [(ngModel)]="ajudaCusto" name="ajudaCusto" placeholder="Ajuda disponível (R$)" />
@@ -55,8 +58,8 @@
     <div class="caronas-disponiveis-lista">
       <div *ngFor="let viagem of viagens" class="carona-card">
         <img [src]="obterFotoUsuario(viagem.usuario?.email, viagem.usuario?.genero)" alt="Foto" class="carona-foto" />
-        <div class="carona-info">
 
+        <div class="carona-info">
           <!-- Botão excluir -->
           <div *ngIf="viagem.idUsuario === meuId" class="excluir-carona">
             <button (click)="excluirCarona(viagem.idViagem)">🗑️ Excluir Carona</button>
@@ -69,6 +72,7 @@
           <p>Entrada: {{ viagem.horarioEntrada }}</p>
           <p>Saída: {{ viagem.horarioSaida }}</p>
           <p>Ajuda Mensal: R$ {{ viagem.ajudaDeCusto }}</p>
+
           <button (click)="mostrarRota(viagem.partida, viagem.destino)">Ver rota</button>
           <a (click)="abrirWhatsapp(viagem.usuario?.nome, viagem.idUsuario, viagem.usuario?.telefone)">
             <img src="assets/whats1.png" class="whatsapp-icon" alt="WhatsApp">
@@ -92,88 +96,77 @@
       </label>
     </div>
 
-    <textarea [(ngModel)]="comentarioAvaliacao" name="comentario" rows="3" placeholder="Deixe seu comentário sobre a carona"></textarea>
-    <button (click)="enviarAvaliacao()" class="btn-enviar">Enviar Avaliação</button>
+    <textarea 
+      [(ngModel)]="comentarioAvaliacao" 
+      name="comentario" 
+      rows="3" 
+      placeholder="Deixe seu comentário sobre a carona"></textarea>
+
+    <button (click)="enviarAvaliacao()" class="btn-enviar">
+      Enviar Avaliação
+    </button>
   </div>
 
   <!-- Faixa Minhas Caronas -->
-  <div class="minhas-caronas-faixa">
-    <h3 class="titulo-centralizado">Minhas Caronas</h3>
+<div class="minhas-caronas-faixa">
+  <h3 class="titulo-centralizado">Minhas Caronas</h3>
 
-    <!-- Caronas Oferecidas -->
-    <div *ngIf="caronasOferecidas.length > 0">
-      <h4 style="color:white;">Caronas Oferecidas</h4>
-      <div *ngFor="let c of caronasOferecidas" class="avaliacoes-bloco">
-        <p><strong>Partida:</strong> {{ c.partida }}</p>
-        <p><strong>Destino:</strong> {{ c.destino }}</p>
-        <p><strong>Entrada:</strong> {{ c.entrada }}</p>
-        <p><strong>Saída:</strong> {{ c.saida }}</p>
-        <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
-      </div>
-    </div>
-
-    <!-- Caronas Procuradas -->
-    <div *ngIf="caronasProcuradas.length > 0">
-      <h4 style="color:white;">Caronas Procuradas</h4>
-      <div *ngFor="let c of caronasProcuradas" class="avaliacoes-bloco">
-        <p><strong>Partida:</strong> {{ c.partida }}</p>
-        <p><strong>Destino:</strong> {{ c.destino }}</p>
-        <p><strong>Entrada:</strong> {{ c.entrada }}</p>
-        <p><strong>Saída:</strong> {{ c.saida }}</p>
-        <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
-      </div>
-    </div>
-
-    <!-- Mensagem caso não tenha caronas -->
-    <div *ngIf="caronasOferecidas.length === 0 && caronasProcuradas.length === 0" style="color:white;">
-      Você não tem caronas registradas.
+  <!-- Caronas Oferecidas -->
+  <div *ngIf="caronasOferecidas.length > 0">
+    <h4 style="color:white;">Caronas Oferecidas</h4>
+    <div *ngFor="let c of caronasOferecidas" class="avaliacoes-bloco">
+      <p><strong>Partida:</strong> {{ c.partida }}</p>
+      <p><strong>Destino:</strong> {{ c.destino }}</p>
+      <p><strong>Entrada:</strong> {{ c.entrada }}</p>
+      <p><strong>Saída:</strong> {{ c.saida }}</p>
+      <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
     </div>
   </div>
 
-  <!-- Caixa de exportação -->
-  <div class="export-box" *ngIf="(caronasOferecidas?.length || 0) + (caronasProcuradas?.length || 0) > 0; else noRides">
-    <p class="export-msg">
-      💾 Quer guardar ou compartilhar? <strong>Exporte aqui</strong> a lista das suas caronas.
-    </p>
-    <div class="botao-centro export-actions">
-      <button class="btn-mapa" (click)="exportarPDF()">Exportar PDF</button>
-      <button class="btn-mapa primary" (click)="exportarExcel()">Exportar Excel</button>
+  <!-- Caronas Procuradas -->
+  <div *ngIf="caronasProcuradas.length > 0">
+    <h4 style="color:white;">Caronas Procuradas</h4>
+    <div *ngFor="let c of caronasProcuradas" class="avaliacoes-bloco">
+      <p><strong>Partida:</strong> {{ c.partida }}</p>
+      <p><strong>Destino:</strong> {{ c.destino }}</p>
+      <p><strong>Entrada:</strong> {{ c.entrada }}</p>
+      <p><strong>Saída:</strong> {{ c.saida }}</p>
+      <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
     </div>
   </div>
 
-  <ng-template #noRides>
-    <div class="export-box muted">
-      <p class="export-msg">
-        Você ainda não cadastrou caronas. Assim que criar suas rotas, poderá <strong>exportar em PDF ou Excel</strong> por aqui. 🚀
-      </p>
-    </div>
-  </ng-template>
+  <!-- Mensagem caso não tenha caronas -->
+  <div *ngIf="caronasOferecidas.length === 0 && caronasProcuradas.length === 0" style="color:white;">
+    Você não tem caronas registradas.
+  </div>
+</div>
 
-  <div class="minhas-caronas-faixa">
-    <h3 class="titulo-centralizado">Minhas Avaliações</h3>
+<div class="minhas-caronas-faixa">
+  <h3 class="titulo-centralizado">Minhas Avaliações</h3>
 
-    <!-- Avaliações Recebidas -->
-    <div *ngIf="avaliacoesRecebidas.length > 0">
-      <h4 style="color:white;">Avaliações Recebidas</h4>
-      <div *ngFor="let a of avaliacoesRecebidas" class="avaliacoes-bloco">
-        <p><strong>De:</strong> {{ a.nomeAvaliador }}</p>
-        <p><strong>Nota:</strong> ⭐ {{ a.Estrelas }}</p>
-        <p><strong>Comentário:</strong> {{ a.Comentario }}</p>
-      </div>
-    </div>
-
-    <!-- Avaliações Enviadas -->
-    <div *ngIf="avaliacoesEnviadas.length > 0">
-      <h4 style="color:white;">Avaliações Enviadas</h4>
-      <div *ngFor="let a of avaliacoesEnviadas" class="avaliacoes-bloco">
-        <p><strong>Para:</strong> {{ a.nomeAvaliado }}</p>
-        <p><strong>Nota:</strong> ⭐ {{ a.Estrelas }}</p>
-        <p><strong>Comentário:</strong> {{ a.Comentario }}</p>
-      </div>
-    </div>
-
-    <div *ngIf="avaliacoesRecebidas.length === 0 && avaliacoesEnviadas.length === 0" style="color:white;">
-      Você não tem avaliações registradas.
+  <!-- Avaliações Recebidas -->
+  <div *ngIf="avaliacoesRecebidas.length > 0">
+    <h4 style="color:white;">Avaliações Recebidas</h4>
+    <div *ngFor="let a of avaliacoesRecebidas" class="avaliacoes-bloco">
+      <p><strong>De:</strong> {{ a.nomeAvaliador }}</p>
+      <p><strong>Nota:</strong> ⭐ {{ a.Estrelas }}</p>
+      <p><strong>Comentário:</strong> {{ a.Comentario }}</p>
     </div>
   </div>
+
+  <!-- Avaliações Enviadas -->
+  <div *ngIf="avaliacoesEnviadas.length > 0">
+    <h4 style="color:white;">Avaliações Enviadas</h4>
+    <div *ngFor="let a of avaliacoesEnviadas" class="avaliacoes-bloco">
+      <p><strong>Para:</strong> {{ a.nomeAvaliado }}</p>
+      <p><strong>Nota:</strong> ⭐ {{ a.Estrelas }}</p>
+      <p><strong>Comentário:</strong> {{ a.Comentario }}</p>
+    </div>
+  </div>
+
+  <div *ngIf="avaliacoesRecebidas.length === 0 && avaliacoesEnviadas.length === 0" style="color:white;">
+    Você não tem avaliações registradas.
+  </div>
+</div>
+
 </section>
