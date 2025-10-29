@@ -76,7 +76,7 @@
           </div>
 
           <strong>{{ viagem.usuario?.nome || 'Usuário' }}</strong>
-          <p>{{ viagem.tipoUsuario }}</p>
+          <p>{{ tipoNormalizado(viagem) === 'motorista' ? 'motorista' : 'passageiro' }}</p>
           <p>Partida: {{ viagem.partida }}</p>
           <p>Destino: {{ viagem.destino }}</p>
           <p>Entrada: {{ viagem.horarioEntrada }}</p>
