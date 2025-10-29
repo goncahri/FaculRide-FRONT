@@ -92,7 +92,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   // Helper para obter tipo normalizado (funciona se vier v.tipoUsuario ou v.usuario.tipoUsuario)
-  private tipoNormalizado(v: any): 'motorista' | 'passageiro' {
+  public tipoNormalizado(v: any): 'motorista' | 'passageiro' {
     const t = (v?.usuario?.tipoUsuario ?? v?.tipoUsuario ?? '')
       .toString()
       .trim()
@@ -404,7 +404,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
       alert('Falha ao exportar Excel.');
     }
   }
-
+  
   private timestamp(): string {
     const d = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
