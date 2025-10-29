@@ -100,6 +100,25 @@ export class MapaComponent implements AfterViewInit, OnInit {
     return t === 'motorista' ? 'motorista' : 'passageiro';
   }
 
+  // NOVO: normalização de usuários (snake_case/camelCase) sem mudar nada do restante
+  private normalizeUsuario(u: any) {
+    const bruto = (u?.tipoUsuario ?? u?.tipo_usuario ?? u?.tipo ?? '')
+      .toString()
+      .toLowerCase()
+      .trim();
+
+    const tipoUsuario =
+      bruto === 'motorista' || bruto === 'passageiro'
+        ? bruto
+        : (u?.tipoUsuario ?? u?.tipo_usuario ?? '').toString().toLowerCase();
+
+    return {
+      ...u,
+      // garante a chave padronizada que o template usa
+      tipoUsuario
+    };
+  }
+
   carregarViagens(): void {
     this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
       next: (res) => {
@@ -138,7 +157,8 @@ export class MapaComponent implements AfterViewInit, OnInit {
   carregarUsuarios(): void {
     this.http.get<any[]>(`${this.baseURL}/usuario`).subscribe({
       next: (res) => {
-        this.usuarios = res;
+        // AJUSTE: normaliza todos os usuários na chegada
+        this.usuarios = Array.isArray(res) ? res.map(u => this.normalizeUsuario(u)) : [];
 
         // Reprocessa as avaliações já carregadas
         if (this.avaliacoesRecebidas?.length) {
