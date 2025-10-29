@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   FormGroup,
   FormBuilder,
@@ -18,15 +18,15 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
   templateUrl: './cadastro.component.html',
   styleUrls: ['./cadastro.component.css']
 })
-export class CadastroComponent {
+export class CadastroComponent implements OnInit {
   cadastroForm: FormGroup;
-  isMotorista: boolean = false;
+  isMotorista = false;
   anoAtual = new Date().getFullYear();
   hoje: string = new Date().toISOString().split('T')[0];
 
-  // NOVO: estado do arquivo da foto (cadastro)
   selectedFile: File | null = null;
   previewUrl: string | null = null;
+  loading = false;
 
   baseURL = window.location.hostname.includes('localhost')
     ? 'http://localhost:3000/api/usuario'
@@ -37,36 +37,78 @@ export class CadastroComponent {
     private router: Router,
     private http: HttpClient
   ) {
-    this.cadastroForm = this.fb.group({
-      tipoUsuario: ['passageiro', Validators.required],
-      nome: ['', Validators.required],
-      cpf: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      telefone: ['', [Validators.required, Validators.pattern(/^\d{10,11}$/)]],
-      cep: ['', Validators.required],
-      endereco: ['', Validators.required],
-      numero: ['', Validators.required],
-      cidade: ['', Validators.required],
-      estado: ['', Validators.required],
-      fatec: ['', Validators.required],
-      ra: ['', [Validators.required, Validators.pattern(/^\d{13}$/)]],
-      genero: ['', Validators.required],
-      dataNascimento: ['', [Validators.required, this.validarDataNascimento]],
-      senha: ['', [Validators.required, Validators.minLength(6)]],
-      repetirSenha: ['', Validators.required],
-      cnh: [''],
-      modeloCarro: [''],
-      anoCarro: ['', [Validators.pattern(/^\d{4}$/), Validators.min(1980), Validators.max(this.anoAtual)]],
-      corCarro: [''],
-      placa: ['']
-    }, { validators: this.validarSenhas });
+    // mesmo regex do back-end
+    const senhaForteRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{6,}$/;
+
+    this.cadastroForm = this.fb.group(
+      {
+        tipoUsuario: ['passageiro', Validators.required],
+        nome: ['', Validators.required],
+
+        // CPF: 11 dígitos
+        cpf: ['', [Validators.required, Validators.pattern(/^\d{11}$/)]],
+
+        // E-mail
+        email: ['', [Validators.required, Validators.email]],
+
+        // Telefone: 10 ou 11 dígitos
+        telefone: ['', [Validators.required, Validators.pattern(/^\d{10,11}$/)]],
+
+        // CEP: 
+        cep: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]],
+
+        endereco: ['', Validators.required],
+        numero: ['', Validators.required],
+        cidade: ['', Validators.required],
+        estado: ['', [Validators.required, Validators.pattern(/^[A-Z]{2}$/)]],
+        fatec: ['', Validators.required],
+
+        // RA: 13 dígitos
+        ra: ['', [Validators.required, Validators.pattern(/^\d{13}$/)]],
+
+        genero: ['', Validators.required],
+        dataNascimento: ['', [Validators.required, this.validarDataNascimento]],
+
+        // Senha forte:
+        senha: ['', [Validators.required, Validators.pattern(senhaForteRegex)]],
+        repetirSenha: ['', Validators.required],
+
+        // Campos do motorista:
+        cnh: [''],
+        modeloCarro: [''],
+        anoCarro: ['', [Validators.pattern(/^\d{4}$/), Validators.min(1980), Validators.max(this.anoAtual)]],
+        corCarro: [''],
+        placa: ['']
+      },
+      { validators: this.validarSenhas }
+    );
   }
 
-  // ✅ Validação de data de nascimento
+  ngOnInit(): void {
+    // Aplica validators de motorista na primeira carga
+    this.alternarCamposMotorista();
+
+    // Observa mudança do tipo para ligar/desligar validators
+    this.cadastroForm.get('tipoUsuario')?.valueChanges.subscribe(() => {
+      this.alternarCamposMotorista();
+    });
+
+    // Normaliza estado (UF) para maiúsculas em tempo real (opcional)
+    this.cadastroForm.get('estado')?.valueChanges.subscribe(v => {
+      if (v && typeof v === 'string' && v !== v.toUpperCase()) {
+        this.cadastroForm.get('estado')?.setValue(v.toUpperCase(), { emitEvent: false });
+      }
+    });
+  }
+
+  // Validação de data de nascimento
   validarDataNascimento(control: AbstractControl) {
-    const dataInformada = new Date(control.value);
+    const valor = control.value;
+    if (!valor) return null;
+    const dataInformada = new Date(valor);
     const hoje = new Date();
-    if (dataInformada > hoje) {
+    if (isNaN(dataInformada.getTime()) || dataInformada > hoje) {
       return { dataFutura: true };
     }
     return null;
@@ -80,16 +122,19 @@ export class CadastroComponent {
     const campos = ['cnh', 'modeloCarro', 'anoCarro', 'corCarro', 'placa'];
     campos.forEach(campo => {
       const control = this.cadastroForm.get(campo);
+      if (!control) return;
       if (this.isMotorista) {
-        control?.setValidators(Validators.required);
+        control.setValidators(Validators.required);
       } else {
-        control?.clearValidators();
+        control.clearValidators();
+        // limpa valores para não mandar lixo
+        control.setValue('');
       }
-      control?.updateValueAndValidity();
+      control.updateValueAndValidity({ emitEvent: false });
     });
   }
 
-  // Validação se as senhas coincidem
+  // Senhas iguais
   validarSenhas(group: FormGroup) {
     const senha = group.get('senha')?.value;
     const repetir = group.get('repetirSenha')?.value;
@@ -98,7 +143,7 @@ export class CadastroComponent {
 
   // Busca endereço automático pelo CEP
   buscarEnderecoPorCep() {
-    const cep = this.cadastroForm.get('cep')?.value?.replace(/\D/g, '');
+    const cep = (this.cadastroForm.get('cep')?.value || '').replace(/\D/g, '');
     if (!cep || cep.length !== 8) return;
 
     fetch(`https://viacep.com.br/ws/${cep}/json/`)
@@ -106,9 +151,9 @@ export class CadastroComponent {
       .then(data => {
         if (!data.erro) {
           this.cadastroForm.patchValue({
-            endereco: data.logradouro,
-            cidade: data.localidade,
-            estado: data.uf
+            endereco: data.logradouro || '',
+            cidade: data.localidade || '',
+            estado: (data.uf || '').toUpperCase()
           });
         } else {
           alert('CEP não encontrado.');
@@ -119,7 +164,7 @@ export class CadastroComponent {
       });
   }
 
-  // NOVO: seleção/preview de foto no cadastro
+  // Foto
   onFotoChange(evt: Event) {
     const input = evt.target as HTMLInputElement;
     const file = input.files && input.files[0] ? input.files[0] : null;
@@ -130,12 +175,10 @@ export class CadastroComponent {
       alert('Arquivo inválido. Use JPG, PNG ou WEBP.');
       return;
     }
-    // mesmo limite do back (2MB); se quiser aumentar, eu ajusto os dois lados
     if (file.size > 5 * 1024 * 1024) {
       alert('Arquivo muito grande (máx. 5MB).');
       return;
     }
-
 
     this.selectedFile = file;
     this.previewUrl = URL.createObjectURL(file);
@@ -147,60 +190,83 @@ export class CadastroComponent {
     this.previewUrl = null;
   }
 
-  // Envio do formulário com validação visual e alerta
-  onSubmit() {
+  // Helpers de normalização
+  private onlyDigits(v: any): string {
+    return String(v ?? '').replace(/\D/g, '');
+  }
+  private normalizePlaca(v: any): string {
+    return String(v ?? '').toUpperCase().replace(/\s+/g, '');
+  }
+
+  // Envio do formulário
+  async onSubmit() {
     this.cadastroForm.markAllAsTouched();
 
     if (this.cadastroForm.invalid) {
       const camposInvalidos = Object.keys(this.cadastroForm.controls).filter(
-        campo => this.cadastroForm.get(campo)?.invalid
+        c => this.cadastroForm.get(c)?.invalid
       );
       alert('Por favor, preencha corretamente os campos: ' + camposInvalidos.join(', '));
       return;
     }
 
-    const formData = this.cadastroForm.value;
+    if (this.loading) return;
+    this.loading = true;
 
+    const v = this.cadastroForm.value;
+
+    // Normalizações obrigatórias 
     const usuarioFinal: any = {
-      ...formData,
-      genero: formData.genero === 'Masculino'
+      tipoUsuario: v.tipoUsuario,
+      nome: String(v.nome || '').trim(),
+      cpf: this.onlyDigits(v.cpf),                  // 11 dígitos
+      email: String(v.email || '').trim().toLowerCase(),
+      telefone: this.onlyDigits(v.telefone),        // 10/11 dígitos
+      cep: this.onlyDigits(v.cep),                  // 8 dígitos
+      endereco: String(v.endereco || '').trim(),
+      numero: String(v.numero || '').trim(),
+      cidade: String(v.cidade || '').trim(),
+      estado: String(v.estado || '').trim().toUpperCase(),
+      fatec: String(v.fatec || '').trim(),
+      ra: this.onlyDigits(v.ra),                    // 13 dígitos
+      genero: v.genero === 'Masculino' || v.genero === true, // boolean para o back
+      dataNascimento: v.dataNascimento,
+      senha: v.senha
     };
 
-    if (formData.tipoUsuario === 'motorista') {
+    if (v.tipoUsuario === 'motorista') {
+      usuarioFinal.cnh = this.onlyDigits(v.cnh);
       usuarioFinal.veiculo = {
-        Modelo: formData.modeloCarro,
-        Ano: Number(formData.anoCarro),
-        Cor: formData.corCarro,
-        Placa_veiculo: formData.placa
+        Modelo: v.modeloCarro,
+        Ano: Number(v.anoCarro),
+        Cor: v.corCarro,
+        Placa_veiculo: this.normalizePlaca(v.placa)
       };
     }
 
-    // 1) Cadastra o usuário
+    // 1) Cadastra
     this.http.post(this.baseURL, usuarioFinal).subscribe({
       next: async (res: any) => {
         try {
-          // 2) Login silencioso para obter o token
+          // 2) Login para pegar token
           const loginResp: any = await this.http.post(`${this.baseURL}/login`, {
-            email: formData.email,
-            senha: formData.senha
+            email: usuarioFinal.email,
+            senha: v.senha
           }).toPromise();
 
           const token = loginResp?.token || '';
           const usuarioDoLogin = loginResp?.usuario || {};
-          if (token) {
-            localStorage.setItem('token', token);
-          }
+          if (token) localStorage.setItem('token', token);
 
-            // monta objeto salvo (mantendo padrão que você já usa)
-            const usuarioSalvo = {
-              ...usuarioFinal,
-              id: usuarioDoLogin?.id ?? res.id,
-              idUsuario: usuarioDoLogin?.id ?? res.id,
-              veiculo: usuarioDoLogin?.veiculo ?? (usuarioFinal.veiculo || null),
-              foto: null
-            };
+          const usuarioSalvo = {
+            ...usuarioFinal,
+            id: usuarioDoLogin?.id ?? res?.id,
+            idUsuario: usuarioDoLogin?.id ?? res?.id,
+            veiculo: usuarioDoLogin?.veiculo ?? (usuarioFinal.veiculo || null),
+            foto: null
+          };
 
-          // 3) Se tiver foto, envia agora com Authorization
+          // 3) Upload de foto (opcional)
           if (token && this.selectedFile) {
             const fd = new FormData();
             fd.append('file', this.selectedFile, this.selectedFile.name);
@@ -217,28 +283,28 @@ export class CadastroComponent {
               }
             } catch (e) {
               console.warn('Upload de foto falhou após cadastro:', e);
-              // segue sem travar a criação da conta
             }
           }
 
-          // 4) Salva no localStorage e navega
           localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
           alert('✅ Conta criada com sucesso!');
           this.router.navigate(['/login']);
         } catch (e) {
-          console.error('Falha no login/ upload pós-cadastro:', e);
-          // fallback: salva usuário sem foto
+          console.error('Falha no login/upload pós-cadastro:', e);
           const usuarioSalvo = {
             ...usuarioFinal,
-            id: res.id,
+            id: res?.id,
             foto: null
           };
           localStorage.setItem('usuarioLogado', JSON.stringify(usuarioSalvo));
           alert('Conta criada, mas não foi possível concluir o envio da foto. Você pode enviar depois em Perfil.');
           this.router.navigate(['/login']);
+        } finally {
+          this.loading = false;
         }
       },
       error: (err) => {
+        this.loading = false;
         console.error('Erro ao cadastrar:', err);
         alert(err?.error?.erro || 'Erro ao criar conta. Verifique os dados.');
       }
