@@ -91,13 +91,29 @@ export class MapaComponent implements AfterViewInit, OnInit {
     this.directionsRenderer.setMap(this.map);
   }
 
-  // Helper para obter tipo normalizado (funciona se vier v.tipoUsuario ou v.usuario.tipoUsuario)
+  // Helper para obter tipo normalizado.
+  // 1) Tenta pela própria viagem (viagem.usuario.tipoUsuario ou viagem.tipoUsuario)
+  // 2) Se não vier válido, busca na lista this.usuarios pelo idUsuario
   public tipoNormalizado(v: any): 'motorista' | 'passageiro' {
-    const t = (v?.usuario?.tipoUsuario ?? v?.tipoUsuario ?? '')
+    const fromViagem = (v?.usuario?.tipoUsuario ?? v?.tipoUsuario ?? '')
       .toString()
       .trim()
       .toLowerCase();
-    return t === 'motorista' ? 'motorista' : 'passageiro';
+
+    if (fromViagem === 'motorista' || fromViagem === 'passageiro') {
+      return fromViagem as 'motorista' | 'passageiro';
+    }
+
+    // Fallback robusto: procura o usuário carregado em this.usuarios
+    const uid = Number(v?.idUsuario);
+    const u = this.usuarios.find(x => Number(x?.idUsuario ?? x?.id) === uid);
+
+    const fromUsuario = (u?.tipoUsuario ?? u?.tipo_usuario ?? '')
+      .toString()
+      .trim()
+      .toLowerCase();
+
+    return fromUsuario === 'motorista' ? 'motorista' : 'passageiro';
   }
 
   // NOVO: normalização de usuários (snake_case/camelCase) sem mudar nada do restante
