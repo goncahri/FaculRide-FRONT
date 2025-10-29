@@ -58,7 +58,8 @@ export class MapaComponent implements AfterViewInit, OnInit {
     : 'https://projeto-faculride.onrender.com/api';
 
   usuarioLogado = isBrowser() ? JSON.parse(localStorage.getItem('usuarioLogado') || '{}') : {};
-  meuId = this.usuarioLogado.idUsuario || this.usuarioLogado.id;
+  // Normaliza para número (evita comparação string vs number)
+  meuId = Number(this.usuarioLogado.idUsuario || this.usuarioLogado.id);
 
   constructor(private http: HttpClient) {}
 
@@ -76,27 +77,37 @@ export class MapaComponent implements AfterViewInit, OnInit {
     this.inicializarMapa();
   }
 
-inicializarMapa(): void {
-  if (!isBrowser() || !this.mapContainer?.nativeElement) return;  // <— guarda
+  inicializarMapa(): void {
+    if (!isBrowser() || !this.mapContainer?.nativeElement) return; 
 
-  const mapOptions = {
-    center: new google.maps.LatLng(-23.5015, -47.4526),
-    zoom: 12,
-    mapTypeId: google.maps.MapTypeId.ROADMAP
-  };
+    const mapOptions = {
+      center: new google.maps.LatLng(-23.5015, -47.4526),
+      zoom: 12,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    };
 
-  this.map = new google.maps.Map(this.mapContainer.nativeElement, mapOptions);
-  this.directionsRenderer = new google.maps.DirectionsRenderer();
-  this.directionsRenderer.setMap(this.map);
-}
+    this.map = new google.maps.Map(this.mapContainer.nativeElement, mapOptions);
+    this.directionsRenderer = new google.maps.DirectionsRenderer();
+    this.directionsRenderer.setMap(this.map);
+  }
+
+  // Helper para obter tipo normalizado (funciona se vier v.tipoUsuario ou v.usuario.tipoUsuario)
+  private tipoNormalizado(v: any): 'motorista' | 'passageiro' {
+    const t = (v?.usuario?.tipoUsuario ?? v?.tipoUsuario ?? '')
+      .toString()
+      .trim()
+      .toLowerCase();
+    return t === 'motorista' ? 'motorista' : 'passageiro';
+  }
 
   carregarViagens(): void {
     this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
       next: (res) => {
         this.viagens = res;
 
+        // Usa Number() no idUsuario e tipo normalizado para evitar falsos “motorista”
         this.caronasOferecidas = this.viagens
-          .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'motorista')
+          .filter(v => Number(v.idUsuario) === this.meuId && this.tipoNormalizado(v) === 'motorista')
           .map(v => ({
             partida: v.partida,
             destino: v.destino,
@@ -106,7 +117,7 @@ inicializarMapa(): void {
           }));
 
         this.caronasProcuradas = this.viagens
-          .filter(v => v.idUsuario === this.meuId && v.tipoUsuario === 'passageiro')
+          .filter(v => Number(v.idUsuario) === this.meuId && this.tipoNormalizado(v) === 'passageiro')
           .map(v => ({
             partida: v.partida,
             destino: v.destino,
@@ -129,7 +140,7 @@ inicializarMapa(): void {
       next: (res) => {
         this.usuarios = res;
 
-        // 🔄 Reprocessa as avaliações já carregadas
+        // Reprocessa as avaliações já carregadas
         if (this.avaliacoesRecebidas?.length) {
           this.avaliacoesRecebidas = this.avaliacoesRecebidas.map((a: any) => ({
             ...a,
