@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -20,11 +21,10 @@ export class LoginComponent {
   loginAttempts: number = 0;
   showRecoverPasswordSection: boolean = false;
 
-  baseURL = window.location.hostname.includes('localhost')
-    ? 'http://localhost:3000/api'
-    : 'https://projeto-faculride.onrender.com/api';
-
-  constructor(private http: HttpClient) {}
+  constructor(
+    private authService: AuthService, 
+    private router: Router
+  ) {}
 
   login() {
     if (!this.email || !this.password) {
@@ -37,22 +37,11 @@ export class LoginComponent {
       senha: this.password,
     };
 
-    this.http.post<any>(`${this.baseURL}/usuario/login`, loginData).subscribe({
-      next: (res) => {
-        const token = res.token;
-        const usuario = res.usuario;
-
-        if (!token || !usuario) {
-          alert('Erro: Token ou dados do usuário não retornados.');
-          return;
-        }
-
-        // Salvar no localStorage
-        localStorage.setItem('token', token);
-        localStorage.setItem('usuarioLogado', JSON.stringify(usuario));
-
-        alert('✅ Login efetuado com sucesso! ✅');
-        window.location.href = '/usuario';
+    this.authService.login(loginData.email, loginData.senha).subscribe({
+      next: (res: any) => {
+        // AuthService já salva token, inicializa socket e notificações
+        alert('✅ Login efetuado com sucesso!');
+        this.router.navigate(['/usuario']);
       },
       error: (err) => {
         console.error('Erro no login:', err);

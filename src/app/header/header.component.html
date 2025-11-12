@@ -1,7 +1,7 @@
 <header class="header-container">
   <div class="logo-menu">
     <a routerLink="/" class="logo-link">
-      <img src="/assets/logo.png" alt="Logo FaculRide">
+      <img src="/assets/logo.png" alt="Logo FaculRide" />
     </a>
 
     <nav class="menu-left">
@@ -21,6 +21,7 @@
   </div>
 
   <div class="menu-right">
+    <!-- Não logado -->
     <ng-container *ngIf="!isLoggedIn; else usuarioLogado">
       <ul class="menu-list">
         <li><a routerLink="/login">Fazer login</a></li>
@@ -28,37 +29,103 @@
       </ul>
     </ng-container>
 
+    <!-- Logado -->
     <ng-template #usuarioLogado>
-      <div class="user-dropdown" (click)="toggleDropdown()">
-        <img
-          [src]="fotoUsuario"
-          alt="Foto do usuário"
-          class="user-photo"
-          (error)="onImgError()"
-        />
-        <span class="user-name">{{ nomeUsuario }}</span>
-        <span class="arrow-down">▼</span>
+      <div class="menu-right-inner">
+        <!-- Sino de notificações -->
+        <div
+          class="notification-wrapper"
+          (click)="toggleNotifications($event)"
+        >
+          <span class="bell">🔔</span>
+          <span *ngIf="unreadCount > 0" class="badge">
+            {{ unreadCount }}
+          </span>
 
-        <ul *ngIf="isDropdownOpen" class="dropdown-menu-user">
-          <li>
-            <a routerLink="/gerenciar">
-              <img src="/assets/usuario.png" alt="Ícone usuário" class="menu-icon" />
-              Gerenciar Conta
-            </a>
-          </li>
-          <li>
-            <a routerLink="/usuario">
-              <img src="/assets/viajar.png" alt="Ícone viagem" class="menu-icon" />
-              Viajar
-            </a>
-          </li>
-          <li>
-            <button (click)="logout()">
-              <img src="/assets/sair.png" alt="Ícone sair" class="menu-icon" />
-              Sair
-            </button>
-          </li>
-        </ul>
+          <div
+            class="notif-dropdown"
+            *ngIf="isNotificationsOpen"
+            (click)="$event.stopPropagation()"
+          >
+            <div class="notif-header">
+              <span>Notificações</span>
+              <button (click)="markAllAsRead($event)">
+                Marcar todas como lidas
+              </button>
+            </div>
+
+            <div class="notif-list">
+              <div
+                class="notif-item"
+                *ngFor="let n of notifications"
+                [class.unread]="!n.isRead"
+                (click)="markAsRead(n.id, $event)"
+              >
+                <strong>{{ n.title }}</strong>
+                <p>{{ n.message }}</p>
+              </div>
+
+              <p
+                class="notif-empty"
+                *ngIf="notifications.length === 0"
+              >
+                Sem notificações por enquanto 🙂
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dropdown do usuário -->
+        <div
+          class="user-dropdown"
+          (click)="toggleUserDropdown($event)"
+        >
+          <img
+            [src]="fotoUsuario"
+            alt="Foto do usuário"
+            class="user-photo"
+            (error)="onImgError()"
+          />
+          <span class="user-name">{{ nomeUsuario }}</span>
+          <span class="arrow-down">▼</span>
+
+          <ul
+            *ngIf="isUserDropdownOpen"
+            class="dropdown-menu-user"
+            (click)="$event.stopPropagation()"
+          >
+            <li>
+              <a routerLink="/gerenciar">
+                <img
+                  src="/assets/usuario.png"
+                  alt="Ícone usuário"
+                  class="menu-icon"
+                />
+                Gerenciar Conta
+              </a>
+            </li>
+            <li>
+              <a routerLink="/usuario">
+                <img
+                  src="/assets/viajar.png"
+                  alt="Ícone viagem"
+                  class="menu-icon"
+                />
+                Viajar
+              </a>
+            </li>
+            <li>
+              <button (click)="logout($event)">
+                <img
+                  src="/assets/sair.png"
+                  alt="Ícone sair"
+                  class="menu-icon"
+                />
+                Sair
+              </button>
+            </li>
+          </ul>
+        </div>
       </div>
     </ng-template>
   </div>

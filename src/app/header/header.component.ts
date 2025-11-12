@@ -3,21 +3,35 @@ import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../services/auth.service';
+import {
+  NotificationService,
+  Notification,
+} from '../services/notification.service';
 
 @Component({
   selector: 'app-header',
   standalone: true,
   imports: [RouterLink, CommonModule],
   templateUrl: './header.component.html',
-  styleUrls: ['./header.component.css']
+  styleUrls: ['./header.component.css'],
 })
 export class HeaderComponent implements OnInit {
-  isLoggedIn: boolean = false;
-  nomeUsuario: string = '';
-  fotoUsuario: string = '';
-  isDropdownOpen: boolean = false;
+  isLoggedIn = false;
+  nomeUsuario = '';
+  fotoUsuario = '';
 
-  constructor(private router: Router) {}
+  isUserDropdownOpen = false;
+  isNotificationsOpen = false;
+
+  unreadCount = 0;
+  notifications: Notification[] = [];
+
+  constructor(
+    private router: Router,
+    private authService: AuthService,
+    private notificationService: NotificationService
+  ) {}
 
   ngOnInit(): void {
     if (isBrowser()) {
@@ -27,7 +41,6 @@ export class HeaderComponent implements OnInit {
         const usuario = JSON.parse(usuarioLogado);
         this.nomeUsuario = usuario.nome?.split(' ')[0] || 'Usuário';
 
-        // 👉 PRIORIDADE: fotoUrl (Supabase) → foto (legado) → avatares padrão
         const url: string | undefined = usuario.fotoUrl || usuario.foto;
         const fallback =
           usuario.genero === true
@@ -36,38 +49,68 @@ export class HeaderComponent implements OnInit {
             ? '/assets/profile_woman.jpeg'
             : '/assets/usuario.png';
 
-        // cache-buster pra não ficar com a imagem antiga após upload
-        this.fotoUsuario = url ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}` : fallback;
+        this.fotoUsuario = url
+          ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
+          : fallback;
 
-        this.isLoggedIn = true;
+        this.isLoggedIn = this.authService.isAuthenticated();
       } else {
-        this.nomeUsuario = '';
-        this.fotoUsuario = '/assets/usuario.png';
-        this.isLoggedIn = false;
+        this.resetUserInfo();
       }
+
+      // Assina notificações para atualizar badge e lista
+      this.notificationService.notifications$.subscribe((list) => {
+        this.notifications = list || [];
+        this.unreadCount = this.notifications.filter((n) => !n.isRead).length;
+      });
     }
   }
 
-  // fallback se a imagem pública do Supabase falhar
+  private resetUserInfo() {
+    this.nomeUsuario = '';
+    this.fotoUsuario = '/assets/usuario.png';
+    this.isLoggedIn = false;
+  }
+
   onImgError(): void {
     this.fotoUsuario = '/assets/usuario.png';
   }
 
-  toggleDropdown(): void {
-    this.isDropdownOpen = !this.isDropdownOpen;
+  toggleUserDropdown(event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.isUserDropdownOpen = !this.isUserDropdownOpen;
+    // fecha notificações se abrir menu do usuário
+    if (this.isUserDropdownOpen) {
+      this.isNotificationsOpen = false;
+    }
   }
 
-  logout(): void {
-    if (isBrowser()) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('idUsuario');
-      localStorage.removeItem('usuarioLogado');
+  toggleNotifications(event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.isNotificationsOpen = !this.isNotificationsOpen;
+    // fecha menu do usuário se abrir notificações
+    if (this.isNotificationsOpen) {
+      this.isUserDropdownOpen = false;
     }
+  }
 
-    this.isLoggedIn = false;
-    this.isDropdownOpen = false;
+  markAsRead(id: number, event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    this.notificationService.markAsRead(id);
+  }
+
+  markAllAsRead(event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    this.notificationService.markAllAsRead();
+  }
+
+  logout(event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+
+    this.authService.logout(); // limpa token + socket + notificações
+    this.resetUserInfo();
 
     alert('Você saiu da sua conta.');
-    window.location.href = '/login';
+    this.router.navigate(['/login']);
   }
 }

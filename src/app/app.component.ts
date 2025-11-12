@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './header/header.component';
 import { FooterComponent } from './footer/footer.component';
-import { UsuariosService } from './services/usuarios.service';
+import { AuthService } from './services/auth.service'; 
 
 @Component({
   selector: 'app-root',
@@ -16,13 +16,13 @@ import { UsuariosService } from './services/usuarios.service';
   styleUrls: ['./app.component.css'],
 })
 export class AppComponent implements OnInit {
-  usuarios: any[] = [];
 
-  constructor(private usuariosService: UsuariosService) {}
+  constructor(
+    private authService: AuthService // injeta o AuthService
+  ) {}
 
   ngOnInit() {
-    this.usuariosService.getUsuarios().subscribe((data) => {
-      this.usuarios = data;
-    });
+    // Se houver token salvo, reconecta socket + carrega notificações
+    this.authService.bootstrapSession();
   }
 }
