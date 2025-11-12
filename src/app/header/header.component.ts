@@ -58,7 +58,7 @@ export class HeaderComponent implements OnInit, AfterViewInit {
         this.resetUserInfo();
       }
 
-      // Assina notificações para atualizar badge e lista
+      // 🔔 Atualiza badge e lista de notificações em tempo real
       this.notificationService.notifications$.subscribe((list) => {
         this.notifications = list || [];
         this.unreadCount = this.notifications.filter((n) => !n.isRead).length;
@@ -67,31 +67,38 @@ export class HeaderComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // Revalida login após renderização completa (evita header vazio após login)
-    setTimeout(() => {
-      this.isLoggedIn = this.authService.isAuthenticated();
-
-      const usuarioLogado = localStorage.getItem('usuarioLogado');
-      if (usuarioLogado) {
-        const usuario = JSON.parse(usuarioLogado);
-        this.nomeUsuario = usuario.nome?.split(' ')[0] || 'Usuário';
-
-        const url: string | undefined = usuario.fotoUrl || usuario.foto;
-        const fallback =
-          usuario.genero === true
-            ? '/assets/profile_man.jpeg'
-            : usuario.genero === false
-            ? '/assets/profile_woman.jpeg'
-            : '/assets/usuario.png';
-
-        this.fotoUsuario = url
-          ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
-          : fallback;
-      }
-    }, 300);
+    // ⏱️ Revalida o usuário após renderização completa
+    // Corrige o caso de login redirecionar rápido antes do localStorage estar pronto
+    setTimeout(() => this.atualizarUsuarioLogado(), 300);
   }
 
-  private resetUserInfo() {
+  /** Atualiza as informações do usuário no header */
+  private atualizarUsuarioLogado(): void {
+    this.isLoggedIn = this.authService.isAuthenticated();
+
+    const usuarioLogado = localStorage.getItem('usuarioLogado');
+    if (usuarioLogado) {
+      const usuario = JSON.parse(usuarioLogado);
+      this.nomeUsuario = usuario.nome?.split(' ')[0] || 'Usuário';
+
+      const url: string | undefined = usuario.fotoUrl || usuario.foto;
+      const fallback =
+        usuario.genero === true
+          ? '/assets/profile_man.jpeg'
+          : usuario.genero === false
+          ? '/assets/profile_woman.jpeg'
+          : '/assets/usuario.png';
+
+      this.fotoUsuario = url
+        ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
+        : fallback;
+    } else {
+      this.resetUserInfo();
+    }
+  }
+
+  /** Reseta o estado visual do header quando não há usuário logado */
+  private resetUserInfo(): void {
     this.nomeUsuario = '';
     this.fotoUsuario = '/assets/usuario.png';
     this.isLoggedIn = false;
@@ -117,12 +124,12 @@ export class HeaderComponent implements OnInit, AfterViewInit {
     }
   }
 
-  markAsRead(id: number, event?: MouseEvent) {
+  markAsRead(id: number, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.notificationService.markAsRead(id);
   }
 
-  markAllAsRead(event?: MouseEvent) {
+  markAllAsRead(event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.notificationService.markAllAsRead();
   }
