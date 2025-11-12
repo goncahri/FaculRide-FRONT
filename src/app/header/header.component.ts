@@ -1,13 +1,13 @@
 import { isBrowser } from '../utils/is-browser';
 import { Component, OnInit, AfterViewInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { Router } from '@angular/router';
+import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../services/auth.service';
 import {
   NotificationService,
   Notification,
 } from '../services/notification.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-header',
@@ -35,30 +35,16 @@ export class HeaderComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     if (isBrowser()) {
-      const usuarioLogado = localStorage.getItem('usuarioLogado');
+      this.atualizarUsuarioLogado();
 
-      if (usuarioLogado) {
-        const usuario = JSON.parse(usuarioLogado);
-        this.nomeUsuario = usuario.nome?.split(' ')[0] || 'Usuário';
+      // 🔁 Atualiza sempre que a rota mudar (ex: login → /usuario)
+      this.router.events
+        .pipe(filter((event) => event instanceof NavigationEnd))
+        .subscribe(() => {
+          this.atualizarUsuarioLogado();
+        });
 
-        const url: string | undefined = usuario.fotoUrl || usuario.foto;
-        const fallback =
-          usuario.genero === true
-            ? '/assets/profile_man.jpeg'
-            : usuario.genero === false
-            ? '/assets/profile_woman.jpeg'
-            : '/assets/usuario.png';
-
-        this.fotoUsuario = url
-          ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
-          : fallback;
-
-        this.isLoggedIn = this.authService.isAuthenticated();
-      } else {
-        this.resetUserInfo();
-      }
-
-      // 🔔 Atualiza badge e lista de notificações em tempo real
+      // 🔔 Atualiza badge e lista de notificações
       this.notificationService.notifications$.subscribe((list) => {
         this.notifications = list || [];
         this.unreadCount = this.notifications.filter((n) => !n.isRead).length;
@@ -67,14 +53,15 @@ export class HeaderComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // ⏱️ Revalida o usuário após renderização completa
-    // Corrige o caso de login redirecionar rápido antes do localStorage estar pronto
+    // Revalida login após renderização completa (caso de redirecionamento rápido)
     setTimeout(() => this.atualizarUsuarioLogado(), 300);
   }
 
-  /** Atualiza as informações do usuário no header */
+  /** Atualiza informações do usuário no header */
   private atualizarUsuarioLogado(): void {
     this.isLoggedIn = this.authService.isAuthenticated();
+
+    if (!isBrowser()) return;
 
     const usuarioLogado = localStorage.getItem('usuarioLogado');
     if (usuarioLogado) {
@@ -92,12 +79,13 @@ export class HeaderComponent implements OnInit, AfterViewInit {
       this.fotoUsuario = url
         ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
         : fallback;
+
+      this.isLoggedIn = true;
     } else {
       this.resetUserInfo();
     }
   }
 
-  /** Reseta o estado visual do header quando não há usuário logado */
   private resetUserInfo(): void {
     this.nomeUsuario = '';
     this.fotoUsuario = '/assets/usuario.png';
@@ -124,12 +112,12 @@ export class HeaderComponent implements OnInit, AfterViewInit {
     }
   }
 
-  markAsRead(id: number, event?: MouseEvent): void {
+  markAsRead(id: number, event?: MouseEvent) {
     if (event) event.stopPropagation();
     this.notificationService.markAsRead(id);
   }
 
-  markAllAsRead(event?: MouseEvent): void {
+  markAllAsRead(event?: MouseEvent) {
     if (event) event.stopPropagation();
     this.notificationService.markAllAsRead();
   }
