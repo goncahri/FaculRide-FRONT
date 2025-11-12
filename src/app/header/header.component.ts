@@ -1,5 +1,5 @@
 import { isBrowser } from '../utils/is-browser';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -16,7 +16,7 @@ import {
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.css'],
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, AfterViewInit {
   isLoggedIn = false;
   nomeUsuario = '';
   fotoUsuario = '';
@@ -66,6 +66,31 @@ export class HeaderComponent implements OnInit {
     }
   }
 
+  ngAfterViewInit(): void {
+    // Revalida login após renderização completa (evita header vazio após login)
+    setTimeout(() => {
+      this.isLoggedIn = this.authService.isAuthenticated();
+
+      const usuarioLogado = localStorage.getItem('usuarioLogado');
+      if (usuarioLogado) {
+        const usuario = JSON.parse(usuarioLogado);
+        this.nomeUsuario = usuario.nome?.split(' ')[0] || 'Usuário';
+
+        const url: string | undefined = usuario.fotoUrl || usuario.foto;
+        const fallback =
+          usuario.genero === true
+            ? '/assets/profile_man.jpeg'
+            : usuario.genero === false
+            ? '/assets/profile_woman.jpeg'
+            : '/assets/usuario.png';
+
+        this.fotoUsuario = url
+          ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`
+          : fallback;
+      }
+    }, 300);
+  }
+
   private resetUserInfo() {
     this.nomeUsuario = '';
     this.fotoUsuario = '/assets/usuario.png';
@@ -79,7 +104,6 @@ export class HeaderComponent implements OnInit {
   toggleUserDropdown(event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.isUserDropdownOpen = !this.isUserDropdownOpen;
-    // fecha notificações se abrir menu do usuário
     if (this.isUserDropdownOpen) {
       this.isNotificationsOpen = false;
     }
@@ -88,7 +112,6 @@ export class HeaderComponent implements OnInit {
   toggleNotifications(event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.isNotificationsOpen = !this.isNotificationsOpen;
-    // fecha menu do usuário se abrir notificações
     if (this.isNotificationsOpen) {
       this.isUserDropdownOpen = false;
     }
@@ -107,7 +130,7 @@ export class HeaderComponent implements OnInit {
   logout(event?: MouseEvent): void {
     if (event) event.stopPropagation();
 
-    this.authService.logout(); // limpa token + socket + notificações
+    this.authService.logout();
     this.resetUserInfo();
 
     alert('Você saiu da sua conta.');
