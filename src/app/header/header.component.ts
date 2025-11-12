@@ -34,33 +34,43 @@ export class HeaderComponent implements OnInit, AfterViewInit {
   ) {}
 
   ngOnInit(): void {
-    if (isBrowser()) {
-      this.atualizarUsuarioLogado();
+    if (!isBrowser()) return;
 
-      // 🔁 Atualiza sempre que a rota mudar (ex: login → /usuario)
-      this.router.events
-        .pipe(filter((event) => event instanceof NavigationEnd))
-        .subscribe(() => {
-          this.atualizarUsuarioLogado();
-        });
+    this.atualizarUsuarioLogado();
 
-      // 🔔 Atualiza badge e lista de notificações
-      this.notificationService.notifications$.subscribe((list) => {
-        this.notifications = list || [];
-        this.unreadCount = this.notifications.filter((n) => !n.isRead).length;
-      });
-    }
+    // Atualiza o header ao trocar de rota (ex: /login → /usuario)
+    this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe(() => this.atualizarUsuarioLogado());
+
+    // Mantém badge/lista sincronizados
+    this.notificationService.notifications$.subscribe((list) => {
+      this.notifications = list || [];
+      this.unreadCount = this.notifications.filter((n) => !n.isRead).length;
+    });
+
+    // Pop-up simples: ao receber notificação em tempo real, abre o dropdown e sobe a página
+    this.notificationService.newNotification$.subscribe(() => {
+      this.isUserDropdownOpen = false;
+      this.isNotificationsOpen = true;
+
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch {
+        // fallback
+        window.scrollTo(0, 0);
+      }
+    });
   }
 
   ngAfterViewInit(): void {
-    // Revalida login após renderização completa (caso de redirecionamento rápido)
+    // Revalida depois que a view renderiza (caso de redirecionamento rápido pós-login)
     setTimeout(() => this.atualizarUsuarioLogado(), 300);
   }
 
   /** Atualiza informações do usuário no header */
   private atualizarUsuarioLogado(): void {
     this.isLoggedIn = this.authService.isAuthenticated();
-
     if (!isBrowser()) return;
 
     const usuarioLogado = localStorage.getItem('usuarioLogado');
@@ -99,17 +109,13 @@ export class HeaderComponent implements OnInit, AfterViewInit {
   toggleUserDropdown(event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.isUserDropdownOpen = !this.isUserDropdownOpen;
-    if (this.isUserDropdownOpen) {
-      this.isNotificationsOpen = false;
-    }
+    if (this.isUserDropdownOpen) this.isNotificationsOpen = false;
   }
 
   toggleNotifications(event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.isNotificationsOpen = !this.isNotificationsOpen;
-    if (this.isNotificationsOpen) {
-      this.isUserDropdownOpen = false;
-    }
+    if (this.isNotificationsOpen) this.isUserDropdownOpen = false;
   }
 
   markAsRead(id: number, event?: MouseEvent) {

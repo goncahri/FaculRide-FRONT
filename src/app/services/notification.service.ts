@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { SocketService } from './socket.service';
 
 export interface Notification {
@@ -24,7 +24,11 @@ export class NotificationService {
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
   notifications$ = this.notificationsSubject.asObservable();
 
-  private initialized = false; // controla se já inicializou
+  // emite SOMENTE a notificação que acabou de chegar via socket (para toast/scroll)
+  private newNotificationSubject = new Subject<Notification>();
+  public newNotification$ = this.newNotificationSubject.asObservable();
+
+  private initialized = false;
 
   get unreadCount() {
     return this.notificationsSubject.value.filter(n => !n.isRead).length;
@@ -32,29 +36,31 @@ export class NotificationService {
 
   constructor(
     private http: HttpClient,
-    private socketService: SocketService 
+    private socketService: SocketService
   ) {}
 
   /** Chamar após login / bootstrap com token válido */
   init(token: string) {
-    if (!token) return;
-
-    if (this.initialized) return; // evita inicializar 2x
+    if (!token || this.initialized) return;
     this.initialized = true;
 
     this.socketService.connect(token);
     this.loadNotifications();
 
+    // push na lista + emite evento para o toast
     this.socketService.notification$.subscribe((nova) => {
       if (!nova) return;
       const atual = this.notificationsSubject.value;
-      this.notificationsSubject.next([nova as Notification, ...atual]);
+      const noti = nova as Notification;
+
+      this.notificationsSubject.next([noti, ...atual]);
+      this.newNotificationSubject.next(noti);
     });
   }
 
   loadNotifications() {
     this.http.get<Notification[]>(this.API_URL).subscribe({
-      next: (data) => this.notificationsSubject.next(data),
+      next: (data) => this.notificationsSubject.next(data || []),
       error: (err) =>
         console.error('[NotificationService] erro ao carregar notificações', err),
     });
@@ -89,8 +95,8 @@ export class NotificationService {
 
   /** Usado no logout */
   clear() {
-    this.socketService.disconnect();          // encerra socket
-    this.notificationsSubject.next([]);      // limpa lista
-    this.initialized = false;                // permite init de novo no próximo login
+    this.socketService.disconnect();
+    this.notificationsSubject.next([]);
+    this.initialized = false;
   }
 }
