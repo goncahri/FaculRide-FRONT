@@ -17,6 +17,11 @@ export class MapaComponent implements AfterViewInit, OnInit {
   map!: google.maps.Map;
   directionsRenderer!: google.maps.DirectionsRenderer;
 
+  // ===== NOVO: marcadores no mapa =====
+  markers: google.maps.Marker[] = [];
+  infoWindow!: google.maps.InfoWindow;
+  // ====================================
+
   // ===== Spinner/estado de carregamento =====
   carregando: boolean = true;
   private _loads = { usuarios: false, viagens: false, avaliacoes: false };
@@ -89,6 +94,11 @@ export class MapaComponent implements AfterViewInit, OnInit {
     this.map = new google.maps.Map(this.mapContainer.nativeElement, mapOptions);
     this.directionsRenderer = new google.maps.DirectionsRenderer();
     this.directionsRenderer.setMap(this.map);
+
+    // ===== NOVO: InfoWindow e tentativa de desenhar marcadores =====
+    this.infoWindow = new google.maps.InfoWindow();
+    this.atualizarMarcadoresViagens(); // caso as viagens já tenham carregado
+    // ===============================================================
   }
 
   // Helper para obter tipo normalizado.
@@ -160,6 +170,10 @@ export class MapaComponent implements AfterViewInit, OnInit {
             saida: v.horarioSaida,
             ajuda: v.ajudaDeCusto
           }));
+
+        // ===== NOVO: atualizar marcadores com base nas viagens carregadas =====
+        this.atualizarMarcadoresViagens();
+        // =====================================================================
 
         this.markLoaded('viagens');
       },
@@ -334,6 +348,87 @@ export class MapaComponent implements AfterViewInit, OnInit {
         console.error('Erro ao excluir carona:', err);
         alert('Erro ao excluir carona. Tente novamente.');
       }
+    });
+  }
+
+  // ===================== NOVO: Marcadores de viagens no mapa =====================
+
+  /**
+   * Desenha marcadores das viagens no mapa, usando o endereço de partida
+   * como base. Ao clicar na bolinha, abre um popup com dados e botão
+   * "Visualizar rota" (chama a mesma função dos cards).
+   */
+  private atualizarMarcadoresViagens(): void {
+    if (!isBrowser()) return;
+    if (!this.map) return;
+    if (!this.viagens || !this.viagens.length) return;
+
+    // limpa marcadores antigos
+    this.markers.forEach(m => m.setMap(null));
+    this.markers = [];
+
+    const geocoder = new google.maps.Geocoder();
+
+    this.viagens.forEach((v) => {
+      const partida = v.partida;
+      const destino = v.destino;
+
+      if (!partida) return;
+
+      geocoder.geocode({ address: partida }, (results, status) => {
+        if (status === 'OK' && results && results[0]) {
+          const pos = results[0].geometry.location;
+          const nome = this.pegarNomeUsuario(Number(v.idUsuario));
+          const tipo = this.tipoNormalizado(v);
+
+          const marker = new google.maps.Marker({
+            map: this.map,
+            position: pos,
+            // Label com inicial do nome (se tiver)
+            label: nome && nome.length ? nome[0].toUpperCase() : undefined,
+          });
+
+          marker.addListener('click', () => {
+            const partidaLabel = partida || '';
+            const destinoLabel = destino || '';
+            const entrada = v.horarioEntrada || v.horario_entrada || '';
+            const saida = v.horarioSaida || v.horario_saida || '';
+            const tipoLegivel = tipo === 'motorista' ? 'Motorista (oferece carona)' : 'Passageiro (procura carona)';
+
+            const conteudo =
+              `<div style="min-width:220px;font-family:Arial, sans-serif;font-size:12px;">
+                <div style="font-weight:bold;font-size:13px;margin-bottom:2px;">${nome}</div>
+                <div style="color:#555;margin-bottom:4px;">${tipoLegivel}</div>
+                <div style="margin-bottom:4px;">
+                  <div><strong>Partida:</strong> ${partidaLabel}</div>
+                  <div><strong>Destino:</strong> ${destinoLabel}</div>
+                  <div><strong>Entrada:</strong> ${entrada}</div>
+                  <div><strong>Saída:</strong> ${saida}</div>
+                </div>
+                <button id="btnMostrarRotaMarker"
+                        style="margin-top:4px;padding:4px 8px;border:none;border-radius:4px;
+                               background:#1976d2;color:#fff;cursor:pointer;">
+                  Visualizar rota
+                </button>
+              </div>`;
+
+            this.infoWindow.setContent(conteudo);
+            this.infoWindow.open(this.map, marker);
+
+            google.maps.event.addListenerOnce(this.infoWindow, 'domready', () => {
+              const btn = document.getElementById('btnMostrarRotaMarker');
+              if (btn) {
+                btn.onclick = () => this.mostrarRota(partidaLabel, destinoLabel);
+              }
+            });
+          });
+
+          this.markers.push(marker);
+        } else {
+          // se der erro no geocode, só ignora aquele ponto
+          // console.warn('Geocode falhou para:', partida, status);
+        }
+      });
     });
   }
 
