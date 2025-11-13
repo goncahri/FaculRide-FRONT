@@ -16,25 +16,23 @@ export class AuthService {
     private notificationService: NotificationService
   ) {}
 
-/** Faz login e armazena token e dados do usuário */
-    login(email: string, senha: string): Observable<any> {
-      return this.http.post<any>(`${this.API_URL}/login`, { email, senha }).pipe(
-        tap((res) => {
-          const token = res.token;
-          const usuario = res.usuario;
+  /** Faz login e armazena token e dados do usuário */
+  login(email: string, senha: string): Observable<any> {
+    return this.http.post<any>(`${this.API_URL}/login`, { email, senha }).pipe(
+      tap((res) => {
+        const token = res?.token;
+        const usuario = res?.usuario;
 
-          if (token && usuario) {
-            localStorage.setItem('token', token);
-            localStorage.setItem('usuarioLogado', JSON.stringify(usuario));
-
-            // Inicia o sistema de notificações em tempo real
-            this.notificationService.init(token);
-          } else {
-            console.error('Resposta inválida do servidor: faltando token ou usuário.');
-          }
-        })
-      );
-    }
+        if (token && usuario) {
+          localStorage.setItem('token', token);
+          localStorage.setItem('usuarioLogado', JSON.stringify(usuario));
+          this.notificationService.init(token);
+        } else {
+          console.error('Resposta inválida do servidor: faltando token ou usuário.');
+        }
+      })
+    );
+  }
 
   /** Reativa sessão ao recarregar a página */
   bootstrapSession() {
@@ -44,9 +42,14 @@ export class AuthService {
     }
   }
 
-  /** Faz logout limpando token e desconectando socket */
+  /** Faz logout limpando token, dados locais e desconectando socket */
   logout() {
-    localStorage.removeItem('token');
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('usuarioLogado'); 
+    } catch {}
+
+    // encerra socket e limpa notificações em memória
     this.notificationService.clear();
   }
 

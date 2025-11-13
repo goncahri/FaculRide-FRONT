@@ -1,5 +1,5 @@
 import { isBrowser } from '../utils/is-browser';
-import { Component, OnInit, AfterViewInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, HostListener } from '@angular/core';
 import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../services/auth.service';
@@ -38,7 +38,7 @@ export class HeaderComponent implements OnInit, AfterViewInit {
 
     this.atualizarUsuarioLogado();
 
-    // Atualiza o header ao trocar de rota (ex: /login → /usuario)
+    // Atualiza header ao trocar de rota (ex: /login → /usuario)
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => this.atualizarUsuarioLogado());
@@ -49,23 +49,30 @@ export class HeaderComponent implements OnInit, AfterViewInit {
       this.unreadCount = this.notifications.filter((n) => !n.isRead).length;
     });
 
-    // Pop-up simples: ao receber notificação em tempo real, abre o dropdown e sobe a página
-    this.notificationService.newNotification$.subscribe(() => {
-      this.isUserDropdownOpen = false;
-      this.isNotificationsOpen = true;
-
-      try {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } catch {
-        // fallback
-        window.scrollTo(0, 0);
-      }
-    });
+    // “Popup” simples: ao receber notificação, abre dropdown e sobe a página
+    if ((this.notificationService as any).newNotification$) {
+      this.notificationService.newNotification$.subscribe(() => {
+        this.isUserDropdownOpen = false;
+        this.isNotificationsOpen = true;
+        try {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch {
+          window.scrollTo(0, 0);
+        }
+      });
+    }
   }
 
   ngAfterViewInit(): void {
-    // Revalida depois que a view renderiza (caso de redirecionamento rápido pós-login)
+    // Revalida após render (caso de redirecionamento rápido)
     setTimeout(() => this.atualizarUsuarioLogado(), 300);
+  }
+
+  /** Fecha menus ao clicar fora */
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.isUserDropdownOpen = false;
+    this.isNotificationsOpen = false;
   }
 
   /** Atualiza informações do usuário no header */
@@ -131,8 +138,16 @@ export class HeaderComponent implements OnInit, AfterViewInit {
   logout(event?: MouseEvent): void {
     if (event) event.stopPropagation();
 
+    // encerra sessão e socket/notifications
     this.authService.logout();
+    this.notificationService.clear();
+    // reforço defensivo (caso o logout do AuthService não remova)
+    try { localStorage.removeItem('usuarioLogado'); } catch {}
+
+    // atualiza header imediatamente
     this.resetUserInfo();
+    this.isUserDropdownOpen = false;
+    this.isNotificationsOpen = false;
 
     alert('Você saiu da sua conta.');
     this.router.navigate(['/login']);
