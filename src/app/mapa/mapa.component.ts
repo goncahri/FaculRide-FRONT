@@ -41,6 +41,16 @@ export class MapaComponent implements AfterViewInit, OnInit {
   saidaFatec: string = '';
   ajudaCusto: number | null = null;
 
+  // ===== NOVO: mini calendário (mês atual, dias úteis futuros) =====
+  diasCalendario: {
+    numero: number;
+    dataCompleta: Date;
+    diaSemana: number;
+    desabilitado: boolean;
+    selecionado: boolean;
+  }[] = [];
+  // ================================================================
+
   // Dados das viagens
   viagens: any[] = [];
   caronasOferecidas: any[] = [];
@@ -72,6 +82,9 @@ export class MapaComponent implements AfterViewInit, OnInit {
     // mantém seu fluxo, apenas garante que o spinner começa ligado
     this.carregando = true;
     this._loads = { usuarios: false, viagens: false, avaliacoes: false };
+
+    // NOVO: gera calendário do mês atual
+    this.gerarCalendarioMesAtual();
 
     this.carregarUsuarios();
     this.carregarViagens();
@@ -214,13 +227,80 @@ export class MapaComponent implements AfterViewInit, OnInit {
     });
   }
 
+  // ===================== NOVO: lógica do mini calendário =====================
+
+  private gerarCalendarioMesAtual(): void {
+    if (!isBrowser()) return;
+
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth(); // 0–11
+    const diaHoje = hoje.getDate();
+
+    const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
+
+    const dias: {
+      numero: number;
+      dataCompleta: Date;
+      diaSemana: number;
+      desabilitado: boolean;
+      selecionado: boolean;
+    }[] = [];
+
+    for (let d = 1; d <= ultimoDiaMes; d++) {
+      const data = new Date(ano, mes, d);
+      const diaSemana = data.getDay(); // 0 dom, 1 seg ... 6 sab
+
+      const jaPassou = d < diaHoje;
+      const fimDeSemana = diaSemana === 0 || diaSemana === 6;
+
+      dias.push({
+        numero: d,
+        dataCompleta: data,
+        diaSemana,
+        desabilitado: jaPassou || fimDeSemana,
+        selecionado: false
+      });
+    }
+
+    this.diasCalendario = dias;
+  }
+
+  toggleDiaCalendario(dia: any): void {
+    if (dia.desabilitado) return;
+    dia.selecionado = !dia.selecionado;
+  }
+
+  private getDatasSelecionadasISO(): string[] {
+    return this.diasCalendario
+      .filter(d => d.selecionado && !d.desabilitado)
+      .map(d => {
+        const ano = d.dataCompleta.getFullYear();
+        const mes = String(d.dataCompleta.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.dataCompleta.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`; // ex: 2025-11-17
+      });
+  }
+
+  // ===================================================================
+
   tracarRota(): void {
     if (!this.origem || !this.destino || !this.entradaFatec || !this.saidaFatec) {
       alert('Preencha todos os campos.');
       return;
     }
 
-    const dadosViagem = {
+    // NOVO: pega as datas selecionadas no mini calendário
+    const datasSelecionadas = this.getDatasSelecionadasISO();
+    if (!datasSelecionadas.length) {
+      const continuar = confirm(
+        'Você não selecionou nenhuma data no calendário.\n' +
+        'Deseja cadastrar a rota mesmo assim?'
+      );
+      if (!continuar) return;
+    }
+
+    const dadosViagem: any = {
       tipoUsuario: this.tipoCarona === 'oferecer' ? 'motorista' : 'passageiro',
       partida: this.origem,
       destino: this.destino,
@@ -230,10 +310,15 @@ export class MapaComponent implements AfterViewInit, OnInit {
       idUsuario: this.meuId
     };
 
+    // NOVO: envia as datas agendadas (back trata como opcional)
+    dadosViagem.datasAgendadas = datasSelecionadas;
+
     this.http.post(`${this.baseURL}/viagem`, dadosViagem).subscribe({
       next: () => {
         alert('Rota cadastrada com sucesso!');
         this.carregarViagens();
+        // opcional: resetar seleção do calendário
+        // this.gerarCalendarioMesAtual();
       },
       error: (err) => {
         console.error('Erro ao cadastrar viagem:', err);

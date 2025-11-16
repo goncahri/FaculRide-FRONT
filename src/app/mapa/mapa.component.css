@@ -394,84 +394,173 @@ a:hover {
   }
 
   /* Espaço/gap entre os botões de exportação */
-.botao-centro {
-  gap: 10px;                  /* adiciona espaçamento horizontal */
-  flex-wrap: wrap;            /* quebra linha se faltar espaço */
-}
-
-/* Variação “primária” azul (se usar) */
-.btn-mapa.primary {
-  background-color: #2563eb;
-  border: 1px solid #2563eb;
-  color: #fff;
-}
-
-/* Estado desabilitado (enquanto carrega/sem dados) */
-.btn-mapa:disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
-
-/* Ícones nos botões (se colocar) */
-.btn-mapa .icon {
-  width: 18px;
-  height: 18px;
-  margin-right: 6px;
-  vertical-align: -3px;
-}
-
-/* Cards/listas “Minhas Caronas” – melhor respiro */
-.caronas-bloco li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Botão excluir alinha melhor em telas pequenas */
-.excluir-carona {
-  white-space: nowrap;
-}
-
-/* Ajustes responsivos para os botões de exportação */
-@media (max-width: 768px) {
   .botao-centro {
-    justify-content: stretch;
+    gap: 10px;                  /* adiciona espaçamento horizontal */
+    flex-wrap: wrap;            /* quebra linha se faltar espaço */
   }
-  .btn-mapa {
-    width: 100%;
+
+  /* Variação “primária” azul (se usar) */
+  .btn-mapa.primary {
+    background-color: #2563eb;
+    border: 1px solid #2563eb;
+    color: #fff;
+  }
+
+  /* Estado desabilitado (enquanto carrega/sem dados) */
+  .btn-mapa:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+  }
+
+  /* Ícones nos botões (se colocar) */
+  .btn-mapa .icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+    vertical-align: -3px;
+  }
+
+  /* Cards/listas “Minhas Caronas” – melhor respiro */
+  .caronas-bloco li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Botão excluir alinha melhor em telas pequenas */
+  .excluir-carona {
+    white-space: nowrap;
+  }
+
+  /* Ajustes responsivos para os botões de exportação */
+  @media (max-width: 768px) {
+    .botao-centro {
+      justify-content: stretch;
+    }
+    .btn-mapa {
+      width: 100%;
+      border-radius: 12px;
+    }
+  }
+
+  .carregando-overlay{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    height:60vh;text-align:center;color:#0f172a;font-family:'Poppins',sans-serif
+  }
+  .spinner{border:4px solid #e5e7eb;border-top:4px solid #2563eb;border-radius:50%;
+    width:50px;height:50px;animation:spin 1s linear infinite;margin-bottom:12px}
+  @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+
+  .mapa-wrapper { position: relative; }
+
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15,23,42,.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    z-index: 10;
     border-radius: 12px;
   }
+
+  .loading-box { display: inline-flex; flex-direction: column; gap: 8px; align-items: center; }
+  .spinner {
+    width: 38px; height: 38px; border: 3px solid #fff; border-top-color: transparent;
+    border-radius: 50%; animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
 }
 
-.carregando-overlay{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  height:60vh;text-align:center;color:#0f172a;font-family:'Poppins',sans-serif
+/* ================= NOVO: Mini calendário de agendamento ================= */
+
+.calendario-container {
+  margin-top: 10px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
-.spinner{border:4px solid #e5e7eb;border-top:4px solid #2563eb;border-radius:50%;
-  width:50px;height:50px;animation:spin 1s linear infinite;margin-bottom:12px}
-@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
 
-.mapa-wrapper { position: relative; }
+.calendario-container > label {
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 8px;
+  display: block;
+}
 
-.loading-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(15,23,42,.6);
+.mini-calendario {
+  margin-top: 8px;
+  background-color: #0f172a;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.mini-calendario-dias {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.dia-calendario {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  z-index: 10;
-  border-radius: 12px;
+  background-color: #e5e7eb;
+  color: #0f172a;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
 
-.loading-box { display: inline-flex; flex-direction: column; gap: 8px; align-items: center; }
-.spinner {
-  width: 38px; height: 38px; border: 3px solid #fff; border-top-color: transparent;
-  border-radius: 50%; animation: spin 1s linear infinite;
+.dia-calendario:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
+.dia-calendario.desabilitado {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
+  transform: none;
+}
 
+.dia-calendario.selecionado {
+  background-color: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.5);
+}
+
+.mini-calendario-legenda {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Responsivo para o mini calendário */
+@media (max-width: 768px) {
+  .mini-calendario-dias {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .dia-calendario {
+    width: 34px;
+    height: 34px;
+    font-size: 0.8rem;
+  }
+
+  .calendario-container {
+    padding: 12px;
+  }
 }

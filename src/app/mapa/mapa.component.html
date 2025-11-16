@@ -44,6 +44,29 @@
       </div>
     </div>
 
+    <!-- NOVO: Mini calendário para agendar os dias da rota -->
+    <div class="calendario-container">
+      <label>Selecione os dias deste mês em que esta rota será válida</label>
+      <div class="mini-calendario">
+        <div class="mini-calendario-dias">
+          <div
+            class="dia-calendario"
+            *ngFor="let dia of diasCalendario"
+            [class.desabilitado]="dia.desabilitado"
+            [class.selecionado]="dia.selecionado"
+            (click)="toggleDiaCalendario(dia)"
+          >
+            {{ dia.numero }}
+          </div>
+        </div>
+      </div>
+      <small class="mini-calendario-legenda">
+        Somente <strong>dias úteis futuros</strong> estão habilitados. Você pode marcar
+        mais de um dia.
+      </small>
+    </div>
+    <!-- FIM NOVO CALENDÁRIO -->
+
     <div class="botao-centro">
       <button type="submit" class="btn-mapa">Cadastrar Rota</button>
     </div>
