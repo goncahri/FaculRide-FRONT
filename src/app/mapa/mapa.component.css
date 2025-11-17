@@ -395,7 +395,7 @@ a:hover {
   }
 }
 
-/* ================= NOVO: Mini calendário de agendamento ================= */
+/* ===== Calendário simples das datas da rota ===== */
 
 .calendario-container {
   margin-top: 10px;
@@ -412,94 +412,54 @@ a:hover {
   display: block;
 }
 
-.mini-calendario {
-  margin-top: 8px;
-  background-color: #0f172a;
-  border-radius: 10px;
-  padding: 12px 16px 16px;
-}
-
-/* topo com mês (tipo datepicker) */
-.mini-calendario-topo {
+.calendario-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.mini-calendario-mes {
-  color: #e5e7eb;
-  font-weight: 600;
+.calendario-row input[type="date"] {
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
   font-size: 0.95rem;
 }
 
-/* cabeçalho dias da semana */
-.mini-calendario-semana {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-bottom: 6px;
-  color: #9ca3af;
-  font-size: 0.75rem;
-  text-align: center;
-}
-
-/* grid dos dias */
-.mini-calendario-dias {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-}
-
-.dia-calendario {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #e5e7eb;
-  color: #0f172a;
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
-}
-
-.dia-calendario:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
-}
-
-.dia-calendario.desabilitado {
-  background-color: #111827;
-  color: #4b5563;
-  cursor: not-allowed;
-  opacity: 0.7;
-  box-shadow: none;
-  transform: none;
-}
-
-/* células vazias só pra alinhar como o calendário de nascimento */
-.dia-calendario.placeholder {
-  background: transparent;
-  cursor: default;
-  box-shadow: none;
-  transform: none;
-}
-
-.dia-calendario.selecionado {
-  background-color: #2563eb;
-  color: #ffffff;
-  font-weight: 600;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.5);
-}
-
 .mini-calendario-legenda {
-  display: block;
-  margin-top: 8px;
   font-size: 0.8rem;
   color: #64748b;
+}
+
+.datas-selecionadas {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-data {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background-color: #1d4ed8;
+  color: #fff;
+  font-size: 0.8rem;
+  gap: 4px;
+}
+
+.tag-remover {
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.tag-remover:hover {
+  color: #fecaca;
 }
 
 /* ===== Responsividade geral ===== */
@@ -550,22 +510,10 @@ a:hover {
     width: 100%;
     border-radius: 12px;
   }
-}
 
-/* Responsivo extra pro mini calendário */
-@media (max-width: 768px) {
-  .mini-calendario-dias {
-    grid-template-columns: repeat(7, 1fr);
-  }
-
-  .dia-calendario {
-    width: 34px;
-    height: 34px;
-    font-size: 0.8rem;
-  }
-
-  .calendario-container {
-    padding: 12px;
+  .calendario-row input[type="date"] {
+    width: 100%;
+    max-width: 100%;
   }
 }
 

@@ -17,12 +17,11 @@ export class MapaComponent implements AfterViewInit, OnInit {
   map!: google.maps.Map;
   directionsRenderer!: google.maps.DirectionsRenderer;
 
-  // ===== NOVO: marcadores no mapa =====
+  // ===== Marcadores no mapa =====
   markers: google.maps.Marker[] = [];
   infoWindow!: google.maps.InfoWindow;
-  // ====================================
 
-  // ===== Spinner/estado de carregamento =====
+  // ===== Spinner / estado de carregamento =====
   carregando: boolean = true;
   private _loads = { usuarios: false, viagens: false, avaliacoes: false };
   private markLoaded(key: 'usuarios' | 'viagens' | 'avaliacoes') {
@@ -31,9 +30,8 @@ export class MapaComponent implements AfterViewInit, OnInit {
       this.carregando = false;
     }
   }
-  // =========================================
 
-  // Dados do formulário
+  // ===== Dados do formulário =====
   tipoCarona: string = 'oferecer';
   origem: string = '';
   destino: string = '';
@@ -41,19 +39,11 @@ export class MapaComponent implements AfterViewInit, OnInit {
   saidaFatec: string = '';
   ajudaCusto: number | null = null;
 
-  // Cabeçalho do mini calendário (segunda a domingo)
-  diasSemana: string[] = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-
-  // ===== NOVO: mini calendário (mês atual, dias úteis futuros) =====
-  diasCalendario: {
-    numero: number | null;
-    dataCompleta: Date | null;
-    diaSemana: number | null;
-    desabilitado: boolean;
-    selecionado: boolean;
-    placeholder?: boolean;
-  }[] = [];
-  // ================================================================
+  // === NOVO: calendário simples, igual cadastro (input date) ===
+  hojeISO: string = new Date().toISOString().split('T')[0];   // para min
+  dataRota: string = '';                                      // value do input
+  datasRota: string[] = [];                                   // lista de dias da rota
+  // ============================================================
 
   // Dados das viagens
   viagens: any[] = [];
@@ -71,24 +61,23 @@ export class MapaComponent implements AfterViewInit, OnInit {
   avaliacoesEnviadas: any[] = [];
   usuarios: any[] = [];
 
-  // Configuração da API
+  // Config API
   baseURL = isBrowser() && window.location.hostname.includes('localhost')
     ? 'http://localhost:3000/api'
     : 'https://projeto-faculride.onrender.com/api';
 
   usuarioLogado = isBrowser() ? JSON.parse(localStorage.getItem('usuarioLogado') || '{}') : {};
-  // Normaliza para número (evita comparação string vs number)
   meuId = Number(this.usuarioLogado.idUsuario || this.usuarioLogado.id);
 
   constructor(private http: HttpClient) {}
 
+  // ============================================================
+  // CICLO DE VIDA
+  // ============================================================
+
   ngOnInit(): void {
-    // mantém seu fluxo, apenas garante que o spinner começa ligado
     this.carregando = true;
     this._loads = { usuarios: false, viagens: false, avaliacoes: false };
-
-    // NOVO: gera calendário do mês atual
-    this.gerarCalendarioMesAtual();
 
     this.carregarUsuarios();
     this.carregarViagens();
@@ -100,7 +89,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   inicializarMapa(): void {
-    if (!isBrowser() || !this.mapContainer?.nativeElement) return; 
+    if (!isBrowser() || !this.mapContainer?.nativeElement) return;
 
     const mapOptions = {
       center: new google.maps.LatLng(-23.5015, -47.4526),
@@ -112,15 +101,14 @@ export class MapaComponent implements AfterViewInit, OnInit {
     this.directionsRenderer = new google.maps.DirectionsRenderer();
     this.directionsRenderer.setMap(this.map);
 
-    // ===== NOVO: InfoWindow e tentativa de desenhar marcadores =====
     this.infoWindow = new google.maps.InfoWindow();
-    this.atualizarMarcadoresViagens(); // caso as viagens já tenham carregado
-    // ===============================================================
+    this.atualizarMarcadoresViagens();
   }
 
-  // Helper para obter tipo normalizado.
-  // 1) Tenta pela própria viagem (viagem.usuario.tipoUsuario ou viagem.tipoUsuario)
-  // 2) Se não vier válido, busca na lista this.usuarios pelo idUsuario
+  // ============================================================
+  // TIPOS / USUÁRIOS
+  // ============================================================
+
   public tipoNormalizado(v: any): 'motorista' | 'passageiro' {
     const fromViagem = (v?.usuario?.tipoUsuario ?? v?.tipoUsuario ?? '')
       .toString()
@@ -131,7 +119,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
       return fromViagem as 'motorista' | 'passageiro';
     }
 
-    // Fallback robusto: procura o usuário carregado em this.usuarios
     const uid = Number(v?.idUsuario);
     const u = this.usuarios.find(x => Number(x?.idUsuario ?? x?.id) === uid);
 
@@ -143,7 +130,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
     return fromUsuario === 'motorista' ? 'motorista' : 'passageiro';
   }
 
-  // NOVO: normalização de usuários (snake_case/camelCase) sem mudar nada do restante
   private normalizeUsuario(u: any) {
     const bruto = (u?.tipoUsuario ?? u?.tipo_usuario ?? u?.tipo ?? '')
       .toString()
@@ -155,59 +141,14 @@ export class MapaComponent implements AfterViewInit, OnInit {
         ? bruto
         : (u?.tipoUsuario ?? u?.tipo_usuario ?? '').toString().toLowerCase();
 
-    return {
-      ...u,
-      // garante a chave padronizada que o template usa
-      tipoUsuario
-    };
-  }
-
-  carregarViagens(): void {
-    this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
-      next: (res) => {
-        this.viagens = res;
-
-        // Usa Number() no idUsuario e tipo normalizado para evitar falsos “motorista”
-        this.caronasOferecidas = this.viagens
-          .filter(v => Number(v.idUsuario) === this.meuId && this.tipoNormalizado(v) === 'motorista')
-          .map(v => ({
-            partida: v.partida,
-            destino: v.destino,
-            entrada: v.horarioEntrada,
-            saida: v.horarioSaida,
-            ajuda: v.ajudaDeCusto
-          }));
-
-        this.caronasProcuradas = this.viagens
-          .filter(v => Number(v.idUsuario) === this.meuId && this.tipoNormalizado(v) === 'passageiro')
-          .map(v => ({
-            partida: v.partida,
-            destino: v.destino,
-            entrada: v.horarioEntrada,
-            saida: v.horarioSaida,
-            ajuda: v.ajudaDeCusto
-          }));
-
-        // ===== NOVO: atualizar marcadores com base nas viagens carregadas =====
-        this.atualizarMarcadoresViagens();
-        // =====================================================================
-
-        this.markLoaded('viagens');
-      },
-      error: (err) => {
-        console.error('Erro ao carregar viagens:', err);
-        this.markLoaded('viagens');
-      }
-    });
+    return { ...u, tipoUsuario };
   }
 
   carregarUsuarios(): void {
     this.http.get<any[]>(`${this.baseURL}/usuario`).subscribe({
       next: (res) => {
-        // AJUSTE: normaliza todos os usuários na chegada
         this.usuarios = Array.isArray(res) ? res.map(u => this.normalizeUsuario(u)) : [];
 
-        // Reprocessa as avaliações já carregadas
         if (this.avaliacoesRecebidas?.length) {
           this.avaliacoesRecebidas = this.avaliacoesRecebidas.map((a: any) => ({
             ...a,
@@ -231,117 +172,140 @@ export class MapaComponent implements AfterViewInit, OnInit {
     });
   }
 
-  // ===================== NOVO: lógica do mini calendário =====================
-
-  private gerarCalendarioMesAtual(): void {
-    if (!isBrowser()) return;
-
-    const hoje = new Date();
-    const ano = hoje.getFullYear();
-    const mes = hoje.getMonth(); // 0–11
-    const diaHoje = hoje.getDate();
-
-    const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
-
-    const dias: {
-      numero: number | null;
-      dataCompleta: Date | null;
-      diaSemana: number | null;
-      desabilitado: boolean;
-      selecionado: boolean;
-      placeholder?: boolean;
-    }[] = [];
-
-    // Quantidade de "buracos" antes do dia 1 para alinhar com segunda-feira
-    const primeiroDia = new Date(ano, mes, 1);
-    const diaSemanaPrimeiro = primeiroDia.getDay(); // 0 (dom) .. 6 (sáb)
-    const diaSemanaNormalizado = (diaSemanaPrimeiro + 6) % 7; // 0 = seg, 6 = dom
-
-    for (let i = 0; i < diaSemanaNormalizado; i++) {
-      dias.push({
-        numero: null,
-        dataCompleta: null,
-        diaSemana: null,
-        desabilitado: true,
-        selecionado: false,
-        placeholder: true
-      });
-    }
-
-    for (let d = 1; d <= ultimoDiaMes; d++) {
-      const data = new Date(ano, mes, d);
-      const diaSemana = data.getDay(); // 0 dom, 1 seg ... 6 sab
-
-      const jaPassou = d < diaHoje;
-      const fimDeSemana = diaSemana === 0 || diaSemana === 6;
-
-      dias.push({
-        numero: d,
-        dataCompleta: data,
-        diaSemana,
-        desabilitado: jaPassou || fimDeSemana,
-        selecionado: false,
-        placeholder: false
-      });
-    }
-
-    this.diasCalendario = dias;
+  pegarNomeUsuario(id: number): string {
+    const usuario = this.usuarios.find(u => u.id === id || u.idUsuario === id);
+    return usuario ? usuario.nome : 'Usuário';
   }
 
-  toggleDiaCalendario(dia: any): void {
-    if (dia.desabilitado || dia.placeholder) return;
-    dia.selecionado = !dia.selecionado;
+  obterFotoUsuario(email: string, genero: any): string {
+    const u = this.usuarios.find(x => x?.email?.trim().toLowerCase() === (email || '').trim().toLowerCase());
+    const url = u?.foto || u?.fotoUrl;
+    if (url) return url;
+    if (genero === true) return 'assets/profile_man.jpeg';
+    if (genero === false) return 'assets/profile_woman.jpeg';
+    return 'assets/usuario.png';
   }
 
-  get mesAtualFormatado(): string {
-    const agora = new Date();
-    return agora.toLocaleDateString('pt-BR', {
-      month: 'long',
-      year: 'numeric',
-    });
-  }
+  // ============================================================
+  // VIAGENS
+  // ============================================================
 
-  private getDatasSelecionadasISO(): string[] {
-    return this.diasCalendario
-      .filter(d => d.selecionado && !d.desabilitado && !d.placeholder)
-      .map(d => {
-        const data = d.dataCompleta as Date;
-        const ano = data.getFullYear();
-        const mes = String(data.getMonth() + 1).padStart(2, '0');
-        const dia = String(data.getDate()).padStart(2, '0');
-        return `${ano}-${mes}-${dia}`; // ex: 2025-11-17
-      });
-  }
+  carregarViagens(): void {
+    this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
+      next: (res) => {
+        this.viagens = res || [];
 
-  // Texto bonitinho de dias pra mostrar no card
-  formatDiasViagem(v: any): string {
-    if (!v) return '';
+        this.caronasOferecidas = this.viagens
+          .filter(v => Number(v.idUsuario) === this.meuId && this.tipoNormalizado(v) === 'motorista')
+          .map(v => ({
+            partida: v.partida,
+            destino: v.destino,
+            entrada: v.horarioEntrada,
+            saida: v.horarioSaida,
+            ajuda: v.ajudaDeCusto
+          }));
 
-    // tenta achar em diferentes formatos que o back possa enviar
-    const listaBruta =
-      v.datasAgendadas ||
-      v.diasAgendados ||
-      v.dias ||
-      [];
+        this.caronasProcuradas = this.viagens
+          .filter(v => Number(v.idUsuario) === this.meuId && this.tipoNormalizado(v) === 'passageiro')
+          .map(v => ({
+            partida: v.partida,
+            destino: v.destino,
+            entrada: v.horarioEntrada,
+            saida: v.horarioSaida,
+            ajuda: v.ajudaDeCusto
+          }));
 
-    if (!Array.isArray(listaBruta) || !listaBruta.length) return '';
-
-    const dias = listaBruta.map((item: any) => {
-      const valor = item?.dataDia || item?.data || item;
-
-      const d = new Date(valor);
-      if (!isNaN(d.getTime())) {
-        return String(d.getDate()).padStart(2, '0');
+        this.atualizarMarcadoresViagens();
+        this.markLoaded('viagens');
+      },
+      error: (err) => {
+        console.error('Erro ao carregar viagens:', err);
+        this.markLoaded('viagens');
       }
-
-      const str = String(valor);
-      return str.slice(-2);
     });
-
-    return dias.join(', ');
   }
 
-  // ===================================================================
+  // ========= NOVO: lógica do calendário simples =========
+
+  /** Chamado no (change) do input type="date" */
+  adicionarDataRota(): void {
+    if (!this.dataRota) return;
+
+    // impede datas passadas
+    if (this.dataRota < this.hojeISO) {
+      alert('Escolha apenas datas futuras.');
+      this.dataRota = '';
+      return;
+    }
+
+    const d = new Date(this.dataRota);
+    const diaSemana = d.getDay(); // 0 dom, 6 sab
+    if (diaSemana === 0 || diaSemana === 6) {
+      alert('Selecione apenas dias úteis (segunda a sexta).');
+      this.dataRota = '';
+      return;
+    }
+
+    if (!this.datasRota.includes(this.dataRota)) {
+      this.datasRota.push(this.dataRota);
+      this.datasRota.sort(); // mantém ordenado
+    }
+
+    // limpa o input mas mantém as tags embaixo
+    this.dataRota = '';
+  }
+
+  removerDataRota(data: string): void {
+    this.datasRota = this.datasRota.filter(d => d !== data);
+  }
+
+  formatarDataTag(iso: string): string {
+    // yyyy-mm-dd -> dd/mm
+    const [ano, mes, dia] = iso.split('-');
+    return `${dia}/${mes}`;
+  }
+
+  /** Lê as datas de uma viagem v (seu campo datasAgendadas) e devolve texto bonitinho. */
+  formatarDiasViagem(v: any): string {
+    const lista = this.extrairDatasViagem(v);
+    if (!lista.length) return '';
+
+    const formatadas = lista.map(iso => this.formatarDataTag(iso));
+    return `Dias de aula: ${formatadas.join(', ')}`;
+  }
+
+  /** Tenta extrair array de strings ISO de datas da viagem (vindo do back). */
+  private extrairDatasViagem(v: any): string[] {
+    let bruto: any = v?.datasAgendadas ?? v?.datas_agendadas ?? v?.diasRota ?? [];
+
+    if (!bruto) return [];
+
+    if (Array.isArray(bruto)) {
+      return bruto.map((x: any) => String(x)).filter(Boolean);
+    }
+
+    if (typeof bruto === 'string') {
+      // tenta JSON
+      try {
+        const parsed = JSON.parse(bruto);
+        if (Array.isArray(parsed)) {
+          return parsed.map((x: any) => String(x)).filter(Boolean);
+        }
+      } catch {
+        // não era JSON; tenta separado por vírgula
+        if (bruto.includes(',')) {
+          return bruto.split(',').map(x => x.trim()).filter(Boolean);
+        }
+        if (bruto.length >= 10) {
+          return [bruto.substring(0, 10)];
+        }
+      }
+    }
+
+    return [];
+  }
+
+  // ========= Cadastro da rota =========
 
   tracarRota(): void {
     if (!this.origem || !this.destino || !this.entradaFatec || !this.saidaFatec) {
@@ -349,12 +313,11 @@ export class MapaComponent implements AfterViewInit, OnInit {
       return;
     }
 
-    // NOVO: pega as datas selecionadas no mini calendário
-    const datasSelecionadas = this.getDatasSelecionadasISO();
-    if (!datasSelecionadas.length) {
+    // se não tiver nenhuma data, pergunta se quer prosseguir mesmo assim
+    if (!this.datasRota.length) {
       const continuar = confirm(
-        'Você não selecionou nenhuma data no calendário.\n' +
-        'Deseja cadastrar a rota mesmo assim?'
+        'Você não selecionou nenhuma data da rota.\n' +
+        'Deseja cadastrar assim mesmo?'
       );
       if (!continuar) return;
     }
@@ -366,18 +329,19 @@ export class MapaComponent implements AfterViewInit, OnInit {
       horarioEntrada: this.entradaFatec,
       horarioSaida: this.saidaFatec,
       ajudaDeCusto: this.ajudaCusto ? this.ajudaCusto.toString() : '0',
-      idUsuario: this.meuId
+      idUsuario: this.meuId,
+      // NOVO: envia lista de datas da rota
+      datasAgendadas: this.datasRota
     };
-
-    // NOVO: envia as datas agendadas (back trata como opcional)
-    dadosViagem.datasAgendadas = datasSelecionadas;
 
     this.http.post(`${this.baseURL}/viagem`, dadosViagem).subscribe({
       next: () => {
         alert('Rota cadastrada com sucesso!');
         this.carregarViagens();
-        // opcional: resetar seleção do calendário
-        // this.gerarCalendarioMesAtual();
+        // limpa apenas campos de rota, se quiser
+        // this.origem = ''; this.destino = ''; ...
+        this.datasRota = [];
+        this.dataRota = '';
       },
       error: (err) => {
         console.error('Erro ao cadastrar viagem:', err);
@@ -385,6 +349,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
       }
     });
 
+    // desenha no mapa
     if (isBrowser()) {
       const request: google.maps.DirectionsRequest = {
         origin: this.origem,
@@ -399,19 +364,40 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   mostrarRota(partida: string, destino: string): void {
-    if (isBrowser()) {
-      const directionsService = new google.maps.DirectionsService();
-      const request: google.maps.DirectionsRequest = {
-        origin: partida,
-        destination: destino,
-        travelMode: google.maps.TravelMode.DRIVING
-      };
-      directionsService.route(request, (result, status) => {
-        if (status === 'OK' && result) this.directionsRenderer.setDirections(result);
-      });
-      setTimeout(() => this.mapContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
-    }
+    if (!isBrowser()) return;
+
+    const directionsService = new google.maps.DirectionsService();
+    const request: google.maps.DirectionsRequest = {
+      origin: partida,
+      destination: destino,
+      travelMode: google.maps.TravelMode.DRIVING
+    };
+    directionsService.route(request, (result, status) => {
+      if (status === 'OK' && result) this.directionsRenderer.setDirections(result);
+    });
+    setTimeout(
+      () => this.mapContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      100
+    );
   }
+
+  excluirCarona(idViagem: number) {
+    if (!confirm('Tem certeza que deseja excluir esta carona?')) return;
+    this.http.delete(`${this.baseURL}/viagem/${idViagem}`).subscribe({
+      next: () => {
+        alert('Carona excluída com sucesso!');
+        this.carregarViagens();
+      },
+      error: (err) => {
+        console.error('Erro ao excluir carona:', err);
+        alert('Erro ao excluir carona. Tente novamente.');
+      }
+    });
+  }
+
+  // ============================================================
+  // AVALIAÇÕES
+  // ============================================================
 
   abrirWhatsapp(nome: string, idUsuario: number, numeroWhatsapp: string) {
     if (!numeroWhatsapp) return alert('Número de WhatsApp não disponível');
@@ -467,47 +453,15 @@ export class MapaComponent implements AfterViewInit, OnInit {
     });
   }
 
-  pegarNomeUsuario(id: number): string {
-    const usuario = this.usuarios.find(u => u.id === id || u.idUsuario === id);
-    return usuario ? usuario.nome : 'Usuário';
-  }
+  // ============================================================
+  // MAPA – marcadores
+  // ============================================================
 
-  obterFotoUsuario(email: string, genero: any): string {
-    const u = this.usuarios.find(x => x?.email?.trim().toLowerCase() === (email || '').trim().toLowerCase());
-    const url = u?.foto || u?.fotoUrl;
-    if (url) return url;
-    if (genero === true) return 'assets/profile_man.jpeg';
-    if (genero === false) return 'assets/profile_woman.jpeg';
-    return 'assets/usuario.png';
-  }
-
-  excluirCarona(idViagem: number) {
-    if (!confirm('Tem certeza que deseja excluir esta carona?')) return;
-    this.http.delete(`${this.baseURL}/viagem/${idViagem}`).subscribe({
-      next: () => {
-        alert('Carona excluída com sucesso!');
-        this.carregarViagens();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir carona:', err);
-        alert('Erro ao excluir carona. Tente novamente.');
-      }
-    });
-  }
-
-  // ===================== NOVO: Marcadores de viagens no mapa =====================
-
-  /**
-   * Desenha marcadores das viagens no mapa, usando o endereço de partida
-   * como base. Ao clicar na bolinha, abre um popup com dados e botão
-   * "Visualizar rota" (chama a mesma função dos cards).
-   */
   private atualizarMarcadoresViagens(): void {
     if (!isBrowser()) return;
     if (!this.map) return;
     if (!this.viagens || !this.viagens.length) return;
 
-    // limpa marcadores antigos
     this.markers.forEach(m => m.setMap(null));
     this.markers = [];
 
@@ -528,16 +482,19 @@ export class MapaComponent implements AfterViewInit, OnInit {
           const marker = new google.maps.Marker({
             map: this.map,
             position: pos,
-            // Label com inicial do nome (se tiver)
             label: nome && nome.length ? nome[0].toUpperCase() : undefined,
           });
 
           marker.addListener('click', () => {
             const partidaLabel = partida || '';
             const destinoLabel = destino || '';
-            const entrada = v.horarioEntrada || (v as any).horario_entrada || '';
-            const saida = v.horarioSaida || (v as any).horario_saida || '';
-            const tipoLegivel = tipo === 'motorista' ? 'Motorista (oferece carona)' : 'Passageiro (procura carona)';
+            const entrada = v.horarioEntrada || v.horario_entrada || '';
+            const saida = v.horarioSaida || v.horario_saida || '';
+            const tipoLegivel = tipo === 'motorista'
+              ? 'Motorista (oferece carona)'
+              : 'Passageiro (procura carona)';
+
+            const diasTxt = this.formatarDiasViagem(v);
 
             const conteudo =
               `<div style="min-width:220px;font-family:Arial, sans-serif;font-size:12px;">
@@ -548,6 +505,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
                   <div><strong>Destino:</strong> ${destinoLabel}</div>
                   <div><strong>Entrada:</strong> ${entrada}</div>
                   <div><strong>Saída:</strong> ${saida}</div>
+                  ${diasTxt ? `<div><strong>${diasTxt}</strong></div>` : ''}
                 </div>
                 <button id="btnMostrarRotaMarker"
                         style="margin-top:4px;padding:4px 8px;border:none;border-radius:4px;
@@ -568,15 +526,14 @@ export class MapaComponent implements AfterViewInit, OnInit {
           });
 
           this.markers.push(marker);
-        } else {
-          // se der erro no geocode, só ignora aquele ponto
-          // console.warn('Geocode falhou para:', partida, status);
         }
       });
     });
   }
 
-  // ===================== EXPORTAÇÃO (PDF / EXCEL) =====================
+  // ============================================================
+  // EXPORTAÇÃO PDF / EXCEL
+  // ============================================================
 
   private getCaronasParaExportar() {
     const oferecidas = (this.caronasOferecidas || []).map(c => ({
@@ -611,8 +568,11 @@ export class MapaComponent implements AfterViewInit, OnInit {
     const head = [['Partida', 'Destino', 'Entrada', 'Saída', 'Ajuda (R$)', 'Tipo']];
     const body = linhas.map(l => [l.Partida, l.Destino, l.Entrada, l.Saida, l.Ajuda, l.Tipo]);
 
-    autoTable(doc, { head, body, startY: 70, theme: 'grid', styles: { fontSize: 10, cellPadding: 6 },
-      headStyles: { fillColor: [43, 140, 255], textColor: 255 } });
+    autoTable(doc, {
+      head, body, startY: 70, theme: 'grid',
+      styles: { fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [43, 140, 255], textColor: 255 }
+    });
 
     doc.save(`caronas_${this.timestamp()}.pdf`);
   }
@@ -659,11 +619,10 @@ export class MapaComponent implements AfterViewInit, OnInit {
       alert('Falha ao exportar Excel.');
     }
   }
-  
+
   private timestamp(): string {
     const d = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
   }
-
 }

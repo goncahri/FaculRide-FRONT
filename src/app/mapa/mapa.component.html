@@ -15,7 +15,13 @@
     <div class="linha-horizontal">
       <div class="input-group flex2">
         <label>Partida</label>
-        <input type="text" [(ngModel)]="origem" name="origem" placeholder="Digite seu ponto de partida" required />
+        <input
+          type="text"
+          [(ngModel)]="origem"
+          name="origem"
+          placeholder="Digite seu ponto de partida"
+          required
+        />
       </div>
 
       <div class="input-group flex2">
@@ -30,58 +36,68 @@
     <div class="linha-horizontal">
       <div class="input-group">
         <label>Horário de Entrada na Fatec</label>
-        <input type="time" [(ngModel)]="entradaFatec" name="entradaFatec" required />
+        <input
+          type="time"
+          [(ngModel)]="entradaFatec"
+          name="entradaFatec"
+          required
+        />
       </div>
 
       <div class="input-group">
         <label>Horário de Saída da Fatec</label>
-        <input type="time" [(ngModel)]="saidaFatec" name="saidaFatec" required />
+        <input
+          type="time"
+          [(ngModel)]="saidaFatec"
+          name="saidaFatec"
+          required
+        />
       </div>
 
       <div class="input-group">
         <label>Ajuda Mensal</label>
-        <input type="number" [(ngModel)]="ajudaCusto" name="ajudaCusto" placeholder="Ajuda disponível (R$)" />
+        <input
+          type="number"
+          [(ngModel)]="ajudaCusto"
+          name="ajudaCusto"
+          placeholder="Ajuda disponível (R$)"
+        />
       </div>
     </div>
 
-        <!-- NOVO: Mini calendário para agendar os dias da rota -->
+    <!-- NOVO: Calendário simples (igual data de nascimento) -->
     <div class="calendario-container">
-      <label>Selecione os dias deste mês em que esta rota será válida</label>
+      <label for="dataRota">Selecione os dias em que esta rota será válida</label>
 
-      <div class="mini-calendario">
-        <!-- Cabeçalho do mês (estilo datepicker de nascimento) -->
-        <div class="mini-calendario-topo">
-          <div class="mini-calendario-mes">
-            {{ mesAtualFormatado }}
-          </div>
-        </div>
-
-        <!-- Cabeçalho dos dias da semana -->
-        <div class="mini-calendario-semana">
-          <span *ngFor="let d of diasSemana">{{ d }}</span>
-        </div>
-
-        <!-- Dias do mês -->
-        <div class="mini-calendario-dias">
-          <div
-            class="dia-calendario"
-            *ngFor="let dia of diasCalendario"
-            [class.desabilitado]="dia.desabilitado"
-            [class.selecionado]="dia.selecionado"
-            [class.placeholder]="dia.placeholder"
-            (click)="toggleDiaCalendario(dia)"
-          >
-            <!-- placeholders ficam vazios pra alinhar como no datepicker -->
-            <span *ngIf="!dia.placeholder">{{ dia.numero }}</span>
-          </div>
-        </div>
+      <div class="calendario-row">
+        <input
+          id="dataRota"
+          type="date"
+          [(ngModel)]="dataRota"
+          name="dataRota"
+          [attr.min]="hojeISO"
+          (change)="adicionarDataRota()"
+        />
+        <small class="mini-calendario-legenda">
+          Apenas <strong>dias úteis futuros</strong> são aceitos.
+        </small>
       </div>
 
-      <small class="mini-calendario-legenda">
-        Somente <strong>dias úteis futuros</strong> estão habilitados. Você pode marcar mais de um dia.
-      </small>
+      <!-- tags com os dias escolhidos -->
+      <div class="datas-selecionadas" *ngIf="datasRota.length">
+        <span class="tag-data" *ngFor="let d of datasRota">
+          {{ formatarDataTag(d) }}
+          <button
+            type="button"
+            class="tag-remover"
+            (click)="removerDataRota(d)"
+          >
+            ×
+          </button>
+        </span>
+      </div>
     </div>
-    <!-- FIM NOVO CALENDÁRIO -->
+    <!-- FIM calendário simples -->
 
     <div class="botao-centro">
       <button type="submit" class="btn-mapa">Cadastrar Rota</button>
@@ -106,40 +122,59 @@
     <h3 class="titulo-centralizado">Caronas Disponíveis</h3>
     <div class="caronas-disponiveis-lista">
       <div *ngFor="let viagem of viagens" class="carona-card">
-        <img [src]="obterFotoUsuario(viagem.usuario?.email, viagem.usuario?.genero)" alt="Foto" class="carona-foto" />
+        <img
+          [src]="obterFotoUsuario(viagem.usuario?.email, viagem.usuario?.genero)"
+          alt="Foto"
+          class="carona-foto"
+        />
 
         <div class="carona-info">
           <!-- Botão excluir -->
           <div *ngIf="viagem.idUsuario === meuId" class="excluir-carona">
-            <button (click)="excluirCarona(viagem.idViagem)">🗑️ Excluir Carona</button>
+            <button (click)="excluirCarona(viagem.idViagem)">
+              🗑️ Excluir Carona
+            </button>
           </div>
 
           <strong>{{ viagem.usuario?.nome || 'Usuário' }}</strong>
-          <p>{{ tipoNormalizado(viagem) === 'motorista' ? 'motorista' : 'passageiro' }}</p>
+          <p>
+            {{ tipoNormalizado(viagem) === 'motorista' ? 'motorista' :
+            'passageiro' }}
+          </p>
           <p>Partida: {{ viagem.partida }}</p>
           <p>Destino: {{ viagem.destino }}</p>
           <p>Entrada: {{ viagem.horarioEntrada }}</p>
           <p>Saída: {{ viagem.horarioSaida }}</p>
           <p>Ajuda Mensal: R$ {{ viagem.ajudaDeCusto }}</p>
-          <!-- Dias em que esta rota é válida -->
+
+          <!-- SE quiser manter esta linha como fallback de string pronta -->
           <p *ngIf="formatDiasViagem(viagem)">
             Dias desta rota: {{ formatDiasViagem(viagem) }}
-          </p>      
+          </p>
 
-          <!-- NOVO: dias de aula/agendamento (se o back enviar) -->
+          <!-- Dias de aula/agendamento vindos do back (array de datas ISO) -->
           <p *ngIf="viagem.diasAgendados?.length" class="dias-aula">
-            Dias de aula:
-            <span
-              class="chip-dia"
-              *ngFor="let d of viagem.diasAgendados"
-            >
-              {{ d | date:'dd/MM' }}
+            Dias desta rota:
+            <span class="chip-dia" *ngFor="let d of viagem.diasAgendados">
+              {{ d | date: 'dd/MM' }}
             </span>
           </p>
 
-          <button (click)="mostrarRota(viagem.partida, viagem.destino)">Ver rota</button>
-          <a (click)="abrirWhatsapp(viagem.usuario?.nome, viagem.idUsuario, viagem.usuario?.telefone)">
-            <img src="assets/whats1.png" class="whatsapp-icon" alt="WhatsApp">
+          <button (click)="mostrarRota(viagem.partida, viagem.destino)">
+            Ver rota
+          </button>
+          <a
+            (click)="abrirWhatsapp(
+              viagem.usuario?.nome,
+              viagem.idUsuario,
+              viagem.usuario?.telefone
+            )"
+          >
+            <img
+              src="assets/whats1.png"
+              class="whatsapp-icon"
+              alt="WhatsApp"
+            />
             Entrar em contato
           </a>
         </div>
@@ -153,8 +188,13 @@
     <p class="subtexto-avaliacao">Avalie de 1 a 5 ⭐</p>
 
     <div class="estrelas">
-      <label *ngFor="let nota of [5,4,3,2,1]">
-        <input type="radio" name="avaliacao" [value]="nota" [(ngModel)]="avaliacaoSelecionada" />
+      <label *ngFor="let nota of [5, 4, 3, 2, 1]">
+        <input
+          type="radio"
+          name="avaliacao"
+          [value]="nota"
+          [(ngModel)]="avaliacaoSelecionada"
+        />
         <span class="estrela">&#9733;</span>
         <div class="numero-estrela">{{ nota }}</div>
       </label>
@@ -164,7 +204,8 @@
       [(ngModel)]="comentarioAvaliacao"
       name="comentario"
       rows="3"
-      placeholder="Deixe seu comentário sobre a carona"></textarea>
+      placeholder="Deixe seu comentário sobre a carona"
+    ></textarea>
 
     <button (click)="enviarAvaliacao()" class="btn-enviar">
       Enviar Avaliação
@@ -177,7 +218,7 @@
 
     <!-- Caronas Oferecidas -->
     <div *ngIf="caronasOferecidas.length > 0">
-      <h4 style="color:white;">Caronas Oferecidas</h4>
+      <h4 style="color: white;">Caronas Oferecidas</h4>
       <div *ngFor="let c of caronasOferecidas" class="avaliacoes-bloco">
         <p><strong>Partida:</strong> {{ c.partida }}</p>
         <p><strong>Destino:</strong> {{ c.destino }}</p>
@@ -189,7 +230,7 @@
 
     <!-- Caronas Procuradas -->
     <div *ngIf="caronasProcuradas.length > 0">
-      <h4 style="color:white;">Caronas Procuradas</h4>
+      <h4 style="color: white;">Caronas Procuradas</h4>
       <div *ngFor="let c of caronasProcuradas" class="avaliacoes-bloco">
         <p><strong>Partida:</strong> {{ c.partida }}</p>
         <p><strong>Destino:</strong> {{ c.destino }}</p>
@@ -200,19 +241,28 @@
     </div>
 
     <!-- Mensagem caso não tenha caronas -->
-    <div *ngIf="caronasOferecidas.length === 0 && caronasProcuradas.length === 0" style="color:white;">
+    <div
+      *ngIf="caronasOferecidas.length === 0 && caronasProcuradas.length === 0"
+      style="color: white;"
+    >
       Você não tem caronas registradas.
     </div>
   </div>
 
   <!-- Caixa de exportação -->
-  <div class="export-box" *ngIf="(caronasOferecidas?.length || 0) + (caronasProcuradas?.length || 0) > 0; else noRides">
+  <div
+    class="export-box"
+    *ngIf="(caronasOferecidas?.length || 0) + (caronasProcuradas?.length || 0) > 0; else noRides"
+  >
     <p class="export-msg">
-      💾 Quer guardar ou compartilhar? <strong>Exporte aqui</strong> a lista das suas caronas.
+      💾 Quer guardar ou compartilhar?
+      <strong>Exporte aqui</strong> a lista das suas caronas.
     </p>
     <div class="botao-centro export-actions">
       <button class="btn-mapa" (click)="exportarPDF()">Exportar PDF</button>
-      <button class="btn-mapa primary" (click)="exportarExcel()">Exportar Excel</button>
+      <button class="btn-mapa primary" (click)="exportarExcel()">
+        Exportar Excel
+      </button>
     </div>
   </div>
 
@@ -230,7 +280,7 @@
 
     <!-- Avaliações Recebidas -->
     <div *ngIf="avaliacoesRecebidas.length > 0">
-      <h4 style="color:white;">Avaliações Recebidas</h4>
+      <h4 style="color: white;">Avaliações Recebidas</h4>
       <div *ngFor="let a of avaliacoesRecebidas" class="avaliacoes-bloco">
         <p><strong>De:</strong> {{ a.nomeAvaliador }}</p>
         <p><strong>Nota:</strong> ⭐ {{ a.Estrelas }}</p>
@@ -240,7 +290,7 @@
 
     <!-- Avaliações Enviadas -->
     <div *ngIf="avaliacoesEnviadas.length > 0">
-      <h4 style="color:white;">Avaliações Enviadas</h4>
+      <h4 style="color: white;">Avaliações Enviadas</h4>
       <div *ngFor="let a of avaliacoesEnviadas" class="avaliacoes-bloco">
         <p><strong>Para:</strong> {{ a.nomeAvaliado }}</p>
         <p><strong>Nota:</strong> ⭐ {{ a.Estrelas }}</p>
@@ -248,7 +298,12 @@
       </div>
     </div>
 
-    <div *ngIf="avaliacoesRecebidas.length === 0 && avaliacoesEnviadas.length === 0" style="color:white;">
+    <div
+      *ngIf="
+        avaliacoesRecebidas.length === 0 && avaliacoesEnviadas.length === 0
+      "
+      style="color: white;"
+    >
       Você não tem avaliações registradas.
     </div>
   </div>
