@@ -144,35 +144,56 @@ export class MapaComponent implements AfterViewInit, OnInit {
     };
   }
 
-  // Normaliza o campo de datas vindo do back para sempre virar um array padrão
+  // ====== NORMALIZA AS DATAS VINDAS DO BACK (inclusive viajem_agendada) ======
   private normalizarDatasViagem(v: any): string[] {
-    // Se o back já mandar como diasAgendados
-    if (Array.isArray(v?.diasAgendados) && v.diasAgendados.length) {
-      return v.diasAgendados;
+    const datas: string[] = [];
+
+    // 1) se já vier direto na viagem
+    if (Array.isArray(v?.diasAgendados)) {
+      datas.push(...v.diasAgendados);
+    }
+    if (Array.isArray(v?.datasAgendadas)) {
+      datas.push(...v.datasAgendadas);
+    }
+    if (Array.isArray(v?.datasRota)) {
+      datas.push(...v.datasRota);
     }
 
-    // Se vier como datasAgendadas (nome que estamos enviando no POST)
-    if (Array.isArray(v?.datasAgendadas) && v.datasAgendadas.length) {
-      return v.datasAgendadas;
+    // 2) se vier da tabela viajem_agendada (associação)
+    const ag1 = (v as any).viajem_agendada;
+    const ag2 = (v as any).viajemAgendada;
+    const ag3 = (v as any).agendamentos;
+
+    const agendamentos: any[] | undefined =
+      Array.isArray(ag1) ? ag1 :
+      Array.isArray(ag2) ? ag2 :
+      Array.isArray(ag3) ? ag3 :
+      undefined;
+
+    if (agendamentos) {
+      agendamentos.forEach((a: any) => {
+        if (a?.data) {
+          // garantimos só a parte YYYY-MM-DD
+          const d = a.data.toString().slice(0, 10);
+          datas.push(d);
+        }
+      });
     }
 
-    // Se em algum momento vier como datasRota
-    if (Array.isArray(v?.datasRota) && v.datasRota.length) {
-      return v.datasRota;
-    }
-
-    return [];
+    // remove duplicados
+    return [...new Set(datas)];
   }
 
   carregarViagens(): void {
     this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
       next: (res) => {
         // Normaliza TODAS as viagens para terem sempre v.diasAgendados como array
-        this.viagens = (res || []).map(v => ({
-          ...v,
-          diasAgendados: this.normalizarDatasViagem(v)
-        }));
+        this.viagens = (res || []).map(v => {
+          const diasAgendados = this.normalizarDatasViagem(v);
+          return { ...v, diasAgendados };
+        });
 
+        // === Minhas Caronas (oferecidas/procuradas) ===
         this.caronasOferecidas = this.viagens
           .filter(v => Number(v.idUsuario) === this.meuId && this.tipoNormalizado(v) === 'motorista')
           .map(v => ({
@@ -238,7 +259,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
   adicionarDataRota(): void {
     if (!this.dataRota) return;
 
-    // espera formato YYYY-MM-DD
     const dataStr = this.dataRota;
     const data = new Date(dataStr + 'T00:00:00');
 
@@ -268,7 +288,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
       this.datasRota.push(dataStr);
     }
 
-    // limpa o input
     this.dataRota = '';
   }
 
@@ -277,7 +296,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   formatarDataTag(d: string): string {
-    // d vem como 'YYYY-MM-DD'
     if (!d || d.length < 10) return d;
     const [ano, mes, dia] = d.split('-');
     return `${dia}/${mes}`;
@@ -291,7 +309,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
       return;
     }
 
-    // usa as datasRota (selecionadas no calendário simples)
     const datasSelecionadas = this.datasRota;
     if (!datasSelecionadas.length) {
       const continuar = confirm(
@@ -309,7 +326,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
       horarioSaida: this.saidaFatec,
       ajudaDeCusto: this.ajudaCusto ? this.ajudaCusto.toString() : '0',
       idUsuario: this.meuId,
-      // NOVO: envia as datas agendadas (back pode salvar como quiser)
+      // ainda mando pro back, ele distribui para viajem_agendada
       datasAgendadas: datasSelecionadas
     };
 
@@ -317,8 +334,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
       next: () => {
         alert('Rota cadastrada com sucesso!');
         this.carregarViagens();
-        // se quiser limpar as datas depois de cadastrar:
-        // this.datasRota = [];
       },
       error: (err) => {
         console.error('Erro ao cadastrar viagem:', err);
@@ -441,17 +456,18 @@ export class MapaComponent implements AfterViewInit, OnInit {
 
   // ========= Exibir dias da rota no card (usado no HTML) =========
   formatDiasViagem(v: any): string {
-    // tenta diasAgendados (nome que o back pode usar)
     if (Array.isArray(v?.diasAgendados) && v.diasAgendados.length) {
       return v.diasAgendados.map((d: string) => this.formatarDataTag(d)).join(', ');
     }
 
-    // tenta datasAgendadas (nome que estamos enviando)
     if (Array.isArray(v?.datasAgendadas) && v.datasAgendadas.length) {
       return v.datasAgendadas.map((d: string) => this.formatarDataTag(d)).join(', ');
     }
 
-    // se o back mandar uma string pronta, só devolve
+    if (Array.isArray(v?.datasRota) && v.datasRota.length) {
+      return v.datasRota.map((d: string) => this.formatarDataTag(d)).join(', ');
+    }
+
     if (typeof v?.dias === 'string' && v.dias.trim().length) {
       return v.dias;
     }
@@ -498,6 +514,11 @@ export class MapaComponent implements AfterViewInit, OnInit {
               ? 'Motorista (oferece carona)'
               : 'Passageiro (procura carona)';
 
+            const diasLabel = this.formatDiasViagem(v);
+            const diasHtml = diasLabel
+              ? `<div><strong>Dias:</strong> ${diasLabel}</div>`
+              : '';
+
             const conteudo =
               `<div style="min-width:220px;font-family:Arial, sans-serif;font-size:12px;">
                 <div style="font-weight:bold;font-size:13px;margin-bottom:2px;">${nome}</div>
@@ -507,6 +528,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
                   <div><strong>Destino:</strong> ${destinoLabel}</div>
                   <div><strong>Entrada:</strong> ${entrada}</div>
                   <div><strong>Saída:</strong> ${saida}</div>
+                  ${diasHtml}
                 </div>
                 <button id="btnMostrarRotaMarker"
                         style="margin-top:4px;padding:4px 8px;border:none;border-radius:4px;
