@@ -41,10 +41,18 @@ export class MapaComponent implements AfterViewInit, OnInit {
   saidaFatec: string = '';
   ajudaCusto: number | null = null;
 
-  // ===== Calendário simples (tipo dataNascimento) =====
-  hojeISO: string = new Date().toISOString().split('T')[0]; // min do input date
+  // ===== Calendário simples =====
+  private hoje = new Date();
+  private mesAtual = this.hoje.getMonth();       // 0 = janeiro
+  private anoAtual = this.hoje.getFullYear();
+
+  // limites do mês atual (usados no [min]/[max] do input)
+  primeiroDiaMesISO: string = this.toISO(new Date(this.anoAtual, this.mesAtual, 1));
+  ultimoDiaMesISO: string = this.toISO(new Date(this.anoAtual, this.mesAtual + 1, 0));
+
   dataRota: string = '';          // valor do input <input type="date">
   datasRota: string[] = [];       // lista de datas selecionadas (YYYY-MM-DD)
+  datasConfirmadas: boolean = false;
   // ====================================================
 
   // Dados das viagens
@@ -256,10 +264,17 @@ export class MapaComponent implements AfterViewInit, OnInit {
 
   // =============== LÓGICA DO CALENDÁRIO SIMPLES (INPUT DATE) ===============
 
+  private toISO(d: Date): string {
+    return d.toISOString().split('T')[0];
+  }
+
   adicionarDataRota(): void {
     if (!this.dataRota) return;
 
-    const dataStr = this.dataRota;
+    // mudou a seleção, precisa confirmar de novo
+    this.datasConfirmadas = false;
+
+    const dataStr = this.dataRota; // formato YYYY-MM-DD
     const data = new Date(dataStr + 'T00:00:00');
 
     if (isNaN(data.getTime())) {
@@ -268,31 +283,51 @@ export class MapaComponent implements AfterViewInit, OnInit {
       return;
     }
 
+    // trava só no mês atual (mesmo ano e mês)
+    if (data.getFullYear() !== this.anoAtual || data.getMonth() !== this.mesAtual) {
+      alert('Selecione apenas dias do mês atual.');
+      this.dataRota = '';
+      return;
+    }
+
+    // só datas futuras
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-
     if (data <= hoje) {
       alert('Escolha apenas datas futuras.');
       this.dataRota = '';
       return;
     }
 
+    // libera sábado, bloqueia apenas domingo
     const diaSemana = data.getDay(); // 0 dom, 6 sáb
-    if (diaSemana === 0 || diaSemana === 6) {
-      alert('Apenas dias úteis são aceitos.');
+    if (diaSemana === 0) {
+      alert('Domingo não é permitido.');
       this.dataRota = '';
       return;
     }
 
+    // adiciona se ainda não tiver e ordena
     if (!this.datasRota.includes(dataStr)) {
       this.datasRota.push(dataStr);
+      this.datasRota.sort(); // YYYY-MM-DD => já fica em ordem cronológica
     }
 
+    // limpa o input
     this.dataRota = '';
   }
 
   removerDataRota(data: string): void {
     this.datasRota = this.datasRota.filter(d => d !== data);
+    this.datasConfirmadas = false;
+  }
+
+  confirmarDatasRota(): void {
+    if (!this.datasRota.length) {
+      alert('Selecione pelo menos um dia antes de confirmar.');
+      return;
+    }
+    this.datasConfirmadas = true;
   }
 
   formatarDataTag(d: string): string {

@@ -65,7 +65,7 @@
       </div>
     </div>
 
-    <!-- Calendário simples -->
+        <!-- Calendário simples -->
     <div class="calendario-container">
       <label for="dataRota">Selecione os dias em que esta rota será válida</label>
 
@@ -75,16 +75,35 @@
           type="date"
           [(ngModel)]="dataRota"
           name="dataRota"
-          [attr.min]="hojeISO"
+          [attr.min]="primeiroDiaMesISO"
+          [attr.max]="ultimoDiaMesISO"
           (change)="adicionarDataRota()"
         />
         <small class="mini-calendario-legenda">
-          Apenas <strong>dias úteis futuros</strong> são aceitos.
+          Clique nos dias do mês para selecionar. Apenas
+          <strong>dias futuros (sem domingos)</strong> são aceitos.
         </small>
       </div>
 
-      <!-- tags com os dias escolhidos -->
-      <div class="datas-selecionadas" *ngIf="datasRota.length">
+      <!-- Botão de confirmar (só aparece se já tem pelo menos 1 dia) -->
+      <div
+        class="botao-centro"
+        *ngIf="datasRota.length && !datasConfirmadas"
+      >
+        <button
+          type="button"
+          class="btn-mapa btn-confirmar-dias"
+          (click)="confirmarDatasRota()"
+        >
+          Confirmar dias selecionados
+        </button>
+      </div>
+
+      <!-- tags com os dias escolhidos (só depois de confirmar) -->
+      <div
+        class="datas-selecionadas"
+        *ngIf="datasRota.length && datasConfirmadas"
+      >
         <span class="tag-data" *ngFor="let d of datasRota">
           {{ formatarDataTag(d) }}
           <button
@@ -147,24 +166,19 @@
           <p>Saída: {{ viagem.horarioSaida }}</p>
           <p>Ajuda Mensal: R$ {{ viagem.ajudaDeCusto }}</p>
 
-          <!-- Fallback de string pronta, se existir -->
-          <p *ngIf="formatDiasViagem(viagem)">
-            Dias desta rota: {{ formatDiasViagem(viagem) }}
-          </p>
-
-          <!-- Dias vindos do back: tenta diasAgendados OU datasRota -->
-          <p
-            *ngIf="(viagem.diasAgendados?.length || viagem.datasRota?.length)"
-            class="dias-aula"
-          >
-            Dias desta rota:
-            <span
-              class="chip-dia"
-              *ngFor="let d of (viagem.diasAgendados || viagem.datasRota)"
+            <!-- Dias desta rota (apenas uma vez) -->
+            <p
+              *ngIf="(viagem.diasAgendados?.length || viagem.datasRota?.length)"
+              class="dias-aula"
             >
-              {{ d | date: 'dd/MM' }}
-            </span>
-          </p>
+              Dias desta rota:
+              <span
+                class="chip-dia"
+                *ngFor="let d of (viagem.diasAgendados || viagem.datasRota)"
+              >
+                {{ d | date: 'dd/MM' }}
+              </span>
+            </p>
 
           <button (click)="mostrarRota(viagem.partida, viagem.destino)">
             Ver rota
