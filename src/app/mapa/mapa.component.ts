@@ -3,12 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { isBrowser } from '../utils/is-browser';
-import { CalendarModule } from 'primeng/calendar';
 
 @Component({
   selector: 'app-mapa',
   standalone: true,
-  imports: [CommonModule, FormsModule, CalendarModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './mapa.component.html',
   styleUrls: ['./mapa.component.css']
 })
@@ -42,22 +41,22 @@ export class MapaComponent implements AfterViewInit, OnInit {
   saidaFatec: string = '';
   ajudaCusto: number | null = null;
 
-  // ===== NOVO CALENDÁRIO (PrimeNG) =====
-  // modelo do calendário (datas clicadas visualmente)
-  datasCalendar: Date[] = [];
+  // ===== CALENDÁRIO MANUAL =====
+  mostrarCalendario: boolean = false;     // controla abrir/fechar popup
+  datasRota: string[] = [];               // datas selecionadas (YYYY-MM-DD)
 
-  // ainda mantemos datasRota como array de string YYYY-MM-DD (usado no back)
+  // células do calendário do mês atual
+  diasCalendario: {
+    dia: number;
+    dateStr: string | null;
+    desabilitado: boolean;
+  }[] = [];
+
+  mesAtualLabel: string = '';
+
+  // se você quiser ainda ter hojeISO pra outro uso, mantém aqui
   hojeISO: string = new Date().toISOString().split('T')[0];
-  dataRota: string = '';           // não usamos mais no HTML, mas não atrapalha
-  datasRota: string[] = [];        // lista final de datas selecionadas (ordenadas)
-
-  minDate: Date;                   // início: amanhã
-  maxDate: Date;                   // fim: último dia do mês atual
-  disabledDays: number[] = [0];    // desabilita domingo (0)
-
-  // controla se o calendário aparece ou não
-  mostrarCalendario: boolean = false;
-  // ====================================================
+  // =========================================
 
   // Dados das viagens
   viagens: any[] = [];
@@ -84,20 +83,8 @@ export class MapaComponent implements AfterViewInit, OnInit {
   meuId = Number(this.usuarioLogado.idUsuario || this.usuarioLogado.id);
 
   constructor(private http: HttpClient) {
-    // configura faixas do calendário: só mês atual, só dias futuros
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
-    // amanhã (mantemos a regra de "dias futuros")
-    this.minDate = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
-
-    // último dia do mês atual
-    this.maxDate = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
-  }
-
-  // abre/fecha o calendário quando clicar no botão
-  toggleCalendario(): void {
-    this.mostrarCalendario = !this.mostrarCalendario;
+    // monta o calendário do mês atual logo na criação
+    this.gerarCalendarioMesCorrente();
   }
 
   ngOnInit(): void {
@@ -127,7 +114,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
     this.directionsRenderer.setMap(this.map);
 
     this.infoWindow = new google.maps.InfoWindow();
-    this.atualizarMarcadoresViagens();
+    this.atualizarMarcadoresViagens(); // caso já tenha viagem carregada
   }
 
   // Helper para obter tipo normalizado.
@@ -174,7 +161,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
   private normalizarDatasViagem(v: any): string[] {
     const datas: string[] = [];
 
-    // 1) se já vier direto na viagem
     if (Array.isArray(v?.diasAgendados)) {
       datas.push(...v.diasAgendados);
     }
@@ -185,7 +171,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
       datas.push(...v.datasRota);
     }
 
-    // 2) se vier da tabela viajem_agendada (associação)
     const ag1 = (v as any).viajem_agendada;
     const ag2 = (v as any).viajemAgendada;
     const ag3 = (v as any).agendamentos;
@@ -276,9 +261,8 @@ export class MapaComponent implements AfterViewInit, OnInit {
     });
   }
 
-  // =============== LÓGICA DO CALENDÁRIO (PrimeNG) ===============
+  // =============== LÓGICA DO CALENDÁRIO MANUAL ===============
 
-  // converte Date -> 'YYYY-MM-DD'
   private toISODate(d: Date): string {
     const ano = d.getFullYear();
     const mes = String(d.getMonth() + 1).padStart(2, '0');
@@ -286,33 +270,73 @@ export class MapaComponent implements AfterViewInit, OnInit {
     return `${ano}-${mes}-${dia}`;
   }
 
-  confirmarDatasSelecionadas(): void {
-    if (!this.datasCalendar || !this.datasCalendar.length) {
-      this.datasRota = [];
-      return;
-    }
-
+  private gerarCalendarioMesCorrente(): void {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
 
-    const normalizadas = this.datasCalendar
-      // garante só datas futuras
-      .filter(d => d.getTime() > hoje.getTime())
-      // garante sem domingo
-      .filter(d => d.getDay() !== 0)
-      .map(d => this.toISODate(d));
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth(); // 0..11
 
-    const unicas = Array.from(new Set(normalizadas));
-    unicas.sort((a, b) => a.localeCompare(b));
+    const nomesMes = [
+      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+    ];
+    this.mesAtualLabel = `${nomesMes[mes]} de ${ano}`;
 
-    this.datasRota = unicas;
+    const primeiroDia = new Date(ano, mes, 1);
+    const primeiroDiaSemana = primeiroDia.getDay(); // 0 = domingo
+
+    const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+
+    this.diasCalendario = [];
+
+    // espaços em branco antes do dia 1
+    for (let i = 0; i < primeiroDiaSemana; i++) {
+      this.diasCalendario.push({
+        dia: 0,
+        dateStr: null,
+        desabilitado: true
+      });
+    }
+
+    // dias do mês
+    for (let d = 1; d <= diasNoMes; d++) {
+      const data = new Date(ano, mes, d);
+      data.setHours(0, 0, 0, 0);
+
+      const isPassado = data <= hoje;
+      const isDomingo = data.getDay() === 0;
+
+      this.diasCalendario.push({
+        dia: d,
+        dateStr: this.toISODate(data),
+        desabilitado: isPassado || isDomingo
+      });
+    }
+  }
+
+  toggleCalendario(): void {
+    this.mostrarCalendario = !this.mostrarCalendario;
+  }
+
+  isDiaSelecionado(cel: { dateStr: string | null }): boolean {
+    if (!cel.dateStr) return false;
+    return this.datasRota.includes(cel.dateStr);
+  }
+
+  onClickDia(cel: { dateStr: string | null; desabilitado: boolean }): void {
+    if (!cel.dateStr || cel.desabilitado) return;
+
+    const idx = this.datasRota.indexOf(cel.dateStr);
+    if (idx >= 0) {
+      this.datasRota = this.datasRota.filter(d => d !== cel.dateStr);
+    } else {
+      this.datasRota = [...this.datasRota, cel.dateStr].sort((a, b) => a.localeCompare(b));
+    }
   }
 
   removerDataRota(data: string): void {
     this.datasRota = this.datasRota.filter(d => d !== data);
-
-    // mantém o calendário coerente com as tags
-    this.datasCalendar = this.datasCalendar.filter(d => this.toISODate(d) !== data);
   }
 
   formatarDataTag(d: string): string {
@@ -329,8 +353,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
       return;
     }
 
-    // garante que datasRota esteja sincronizado com o calendário
-    this.confirmarDatasSelecionadas();
     const datasSelecionadas = this.datasRota;
 
     if (!datasSelecionadas.length) {

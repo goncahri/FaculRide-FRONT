@@ -65,7 +65,7 @@
       </div>
     </div>
 
-    <!-- Calendário simples -->
+    <!-- Calendário -->
     <div class="calendario-container">
       <label>Selecione os dias em que esta rota será válida</label>
 
@@ -88,9 +88,35 @@
         </span>
       </div>
 
-      <!-- AQUI ENTRA SEU CALENDÁRIO NOVO -->
+      <!-- POPUP do calendário -->
       <div class="calendario-popup" *ngIf="mostrarCalendario">
-        <!-- substitua por tabela/grid -->
+        <div class="calendario-header">
+          <span class="calendario-mes">{{ mesAtualLabel }}</span>
+          <span class="calendario-legenda">
+            Clique nos dias do mês para selecionar.
+            Domingos e dias passados ficam desativados.
+          </span>
+        </div>
+
+        <div class="calendario-grid">
+          <!-- cabeçalho dias da semana -->
+          <div class="calendario-weekday" *ngFor="let diaSem of ['D','S','T','Q','Q','S','S']">
+            {{ diaSem }}
+          </div>
+
+          <!-- células de dia -->
+          <button
+            type="button"
+            *ngFor="let c of diasCalendario"
+            class="calendario-dia"
+            [class.vazio]="!c.dateStr"
+            [class.selecionado]="isDiaSelecionado(c)"
+            [disabled]="c.desabilitado || !c.dateStr"
+            (click)="onClickDia(c)"
+          >
+            {{ c.dia || '' }}
+          </button>
+        </div>
       </div>
 
       <!-- tags com os dias escolhidos -->
@@ -107,8 +133,7 @@
         </span>
       </div>
     </div>
-    <!-- FIM calendário simples -->
-  </form> <!-- <<< FORM FECHADO AQUI !!! -->
+    <!-- FIM calendário -->
 
   <!-- Mapa SEMPRE no DOM + overlay de carregamento -->
   <div class="mapa-wrapper">
