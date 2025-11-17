@@ -144,10 +144,34 @@ export class MapaComponent implements AfterViewInit, OnInit {
     };
   }
 
+  // Normaliza o campo de datas vindo do back para sempre virar um array padrão
+  private normalizarDatasViagem(v: any): string[] {
+    // Se o back já mandar como diasAgendados
+    if (Array.isArray(v?.diasAgendados) && v.diasAgendados.length) {
+      return v.diasAgendados;
+    }
+
+    // Se vier como datasAgendadas (nome que estamos enviando no POST)
+    if (Array.isArray(v?.datasAgendadas) && v.datasAgendadas.length) {
+      return v.datasAgendadas;
+    }
+
+    // Se em algum momento vier como datasRota
+    if (Array.isArray(v?.datasRota) && v.datasRota.length) {
+      return v.datasRota;
+    }
+
+    return [];
+  }
+
   carregarViagens(): void {
     this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
       next: (res) => {
-        this.viagens = res;
+        // Normaliza TODAS as viagens para terem sempre v.diasAgendados como array
+        this.viagens = (res || []).map(v => ({
+          ...v,
+          diasAgendados: this.normalizarDatasViagem(v)
+        }));
 
         this.caronasOferecidas = this.viagens
           .filter(v => Number(v.idUsuario) === this.meuId && this.tipoNormalizado(v) === 'motorista')
@@ -156,7 +180,8 @@ export class MapaComponent implements AfterViewInit, OnInit {
             destino: v.destino,
             entrada: v.horarioEntrada,
             saida: v.horarioSaida,
-            ajuda: v.ajudaDeCusto
+            ajuda: v.ajudaDeCusto,
+            diasAgendados: v.diasAgendados
           }));
 
         this.caronasProcuradas = this.viagens
@@ -166,7 +191,8 @@ export class MapaComponent implements AfterViewInit, OnInit {
             destino: v.destino,
             entrada: v.horarioEntrada,
             saida: v.horarioSaida,
-            ajuda: v.ajudaDeCusto
+            ajuda: v.ajudaDeCusto,
+            diasAgendados: v.diasAgendados
           }));
 
         this.atualizarMarcadoresViagens();

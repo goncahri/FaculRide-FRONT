@@ -65,7 +65,7 @@
       </div>
     </div>
 
-    <!-- NOVO: Calendário simples (igual data de nascimento) -->
+    <!-- Calendário simples -->
     <div class="calendario-container">
       <label for="dataRota">Selecione os dias em que esta rota será válida</label>
 
@@ -147,15 +147,21 @@
           <p>Saída: {{ viagem.horarioSaida }}</p>
           <p>Ajuda Mensal: R$ {{ viagem.ajudaDeCusto }}</p>
 
-          <!-- SE quiser manter esta linha como fallback de string pronta -->
+          <!-- Fallback de string pronta, se existir -->
           <p *ngIf="formatDiasViagem(viagem)">
             Dias desta rota: {{ formatDiasViagem(viagem) }}
           </p>
 
-          <!-- Dias de aula/agendamento vindos do back (array de datas ISO) -->
-          <p *ngIf="viagem.diasAgendados?.length" class="dias-aula">
+          <!-- Dias vindos do back: tenta diasAgendados OU datasRota -->
+          <p
+            *ngIf="(viagem.diasAgendados?.length || viagem.datasRota?.length)"
+            class="dias-aula"
+          >
             Dias desta rota:
-            <span class="chip-dia" *ngFor="let d of viagem.diasAgendados">
+            <span
+              class="chip-dia"
+              *ngFor="let d of (viagem.diasAgendados || viagem.datasRota)"
+            >
               {{ d | date: 'dd/MM' }}
             </span>
           </p>
@@ -225,6 +231,20 @@
         <p><strong>Entrada:</strong> {{ c.entrada }}</p>
         <p><strong>Saída:</strong> {{ c.saida }}</p>
         <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
+
+        <!-- Datas da rota: tenta diasAgendados OU datasRota -->
+        <p
+          *ngIf="(c.diasAgendados?.length || c.datasRota?.length)"
+          class="dias-aula"
+        >
+          <strong>Dias desta rota:</strong>
+          <span
+            class="chip-dia"
+            *ngFor="let d of (c.diasAgendados || c.datasRota)"
+          >
+            {{ d | date: 'dd/MM' }}
+          </span>
+        </p>
       </div>
     </div>
 
@@ -237,6 +257,20 @@
         <p><strong>Entrada:</strong> {{ c.entrada }}</p>
         <p><strong>Saída:</strong> {{ c.saida }}</p>
         <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
+
+        <!-- Datas da rota: tenta diasAgendados OU datasRota -->
+        <p
+          *ngIf="(c.diasAgendados?.length || c.datasRota?.length)"
+          class="dias-aula"
+        >
+          <strong>Dias desta rota:</strong>
+          <span
+            class="chip-dia"
+            *ngFor="let d of (c.diasAgendados || c.datasRota)"
+          >
+            {{ d | date: 'dd/MM' }}
+          </span>
+        </p>
       </div>
     </div>
 
@@ -275,6 +309,7 @@
     </div>
   </ng-template>
 
+  <!-- Minhas Avaliações -->
   <div class="minhas-caronas-faixa">
     <h3 class="titulo-centralizado">Minhas Avaliações</h3>
 
