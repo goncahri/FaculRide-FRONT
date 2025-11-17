@@ -54,7 +54,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
 
   mesAtualLabel: string = '';
 
-  // se você quiser ainda ter hojeISO pra outro uso, mantém aqui
   hojeISO: string = new Date().toISOString().split('T')[0];
   // =========================================
 
@@ -378,6 +377,16 @@ export class MapaComponent implements AfterViewInit, OnInit {
       next: () => {
         alert('Rota cadastrada com sucesso!');
         this.carregarViagens();
+
+        // 👉 após cadastrar com sucesso, rola suavemente até o mapa
+        if (isBrowser() && this.mapContainer?.nativeElement) {
+          setTimeout(() => {
+            this.mapContainer.nativeElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+          }, 300);
+        }
       },
       error: (err) => {
         console.error('Erro ao cadastrar viagem:', err);
