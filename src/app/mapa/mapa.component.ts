@@ -41,13 +41,17 @@ export class MapaComponent implements AfterViewInit, OnInit {
   saidaFatec: string = '';
   ajudaCusto: number | null = null;
 
+  // Cabeçalho do mini calendário (segunda a domingo)
+  diasSemana: string[] = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
   // ===== NOVO: mini calendário (mês atual, dias úteis futuros) =====
   diasCalendario: {
-    numero: number;
-    dataCompleta: Date;
-    diaSemana: number;
+    numero: number | null;
+    dataCompleta: Date | null;
+    diaSemana: number | null;
     desabilitado: boolean;
     selecionado: boolean;
+    placeholder?: boolean;
   }[] = [];
   // ================================================================
 
@@ -240,12 +244,29 @@ export class MapaComponent implements AfterViewInit, OnInit {
     const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
 
     const dias: {
-      numero: number;
-      dataCompleta: Date;
-      diaSemana: number;
+      numero: number | null;
+      dataCompleta: Date | null;
+      diaSemana: number | null;
       desabilitado: boolean;
       selecionado: boolean;
+      placeholder?: boolean;
     }[] = [];
+
+    // Quantidade de "buracos" antes do dia 1 para alinhar com segunda-feira
+    const primeiroDia = new Date(ano, mes, 1);
+    const diaSemanaPrimeiro = primeiroDia.getDay(); // 0 (dom) .. 6 (sáb)
+    const diaSemanaNormalizado = (diaSemanaPrimeiro + 6) % 7; // 0 = seg, 6 = dom
+
+    for (let i = 0; i < diaSemanaNormalizado; i++) {
+      dias.push({
+        numero: null,
+        dataCompleta: null,
+        diaSemana: null,
+        desabilitado: true,
+        selecionado: false,
+        placeholder: true
+      });
+    }
 
     for (let d = 1; d <= ultimoDiaMes; d++) {
       const data = new Date(ano, mes, d);
@@ -259,7 +280,8 @@ export class MapaComponent implements AfterViewInit, OnInit {
         dataCompleta: data,
         diaSemana,
         desabilitado: jaPassou || fimDeSemana,
-        selecionado: false
+        selecionado: false,
+        placeholder: false
       });
     }
 
@@ -267,7 +289,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   toggleDiaCalendario(dia: any): void {
-    if (dia.desabilitado) return;
+    if (dia.desabilitado || dia.placeholder) return;
     dia.selecionado = !dia.selecionado;
   }
 
@@ -281,13 +303,42 @@ export class MapaComponent implements AfterViewInit, OnInit {
 
   private getDatasSelecionadasISO(): string[] {
     return this.diasCalendario
-      .filter(d => d.selecionado && !d.desabilitado)
+      .filter(d => d.selecionado && !d.desabilitado && !d.placeholder)
       .map(d => {
-        const ano = d.dataCompleta.getFullYear();
-        const mes = String(d.dataCompleta.getMonth() + 1).padStart(2, '0');
-        const dia = String(d.dataCompleta.getDate()).padStart(2, '0');
+        const data = d.dataCompleta as Date;
+        const ano = data.getFullYear();
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const dia = String(data.getDate()).padStart(2, '0');
         return `${ano}-${mes}-${dia}`; // ex: 2025-11-17
       });
+  }
+
+  // Texto bonitinho de dias pra mostrar no card
+  formatDiasViagem(v: any): string {
+    if (!v) return '';
+
+    // tenta achar em diferentes formatos que o back possa enviar
+    const listaBruta =
+      v.datasAgendadas ||
+      v.diasAgendados ||
+      v.dias ||
+      [];
+
+    if (!Array.isArray(listaBruta) || !listaBruta.length) return '';
+
+    const dias = listaBruta.map((item: any) => {
+      const valor = item?.dataDia || item?.data || item;
+
+      const d = new Date(valor);
+      if (!isNaN(d.getTime())) {
+        return String(d.getDate()).padStart(2, '0');
+      }
+
+      const str = String(valor);
+      return str.slice(-2);
+    });
+
+    return dias.join(', ');
   }
 
   // ===================================================================
@@ -484,8 +535,8 @@ export class MapaComponent implements AfterViewInit, OnInit {
           marker.addListener('click', () => {
             const partidaLabel = partida || '';
             const destinoLabel = destino || '';
-            const entrada = v.horarioEntrada || v.horario_entrada || '';
-            const saida = v.horarioSaida || v.horario_saida || '';
+            const entrada = v.horarioEntrada || (v as any).horario_entrada || '';
+            const saida = v.horarioSaida || (v as any).horario_saida || '';
             const tipoLegivel = tipo === 'motorista' ? 'Motorista (oferece carona)' : 'Passageiro (procura carona)';
 
             const conteudo =

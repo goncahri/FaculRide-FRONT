@@ -44,45 +44,41 @@
       </div>
     </div>
 
-    <!-- NOVO: Mini calendário para agendar os dias da rota -->
+        <!-- NOVO: Mini calendário para agendar os dias da rota -->
     <div class="calendario-container">
       <label>Selecione os dias deste mês em que esta rota será válida</label>
 
-      <div class="calendario-header">
-        <div class="calendario-mes">
-          {{ mesAtualFormatado }}
-        </div>
-      </div>
-
       <div class="mini-calendario">
+        <!-- Cabeçalho do mês (estilo datepicker de nascimento) -->
+        <div class="mini-calendario-topo">
+          <div class="mini-calendario-mes">
+            {{ mesAtualFormatado }}
+          </div>
+        </div>
+
         <!-- Cabeçalho dos dias da semana -->
         <div class="mini-calendario-semana">
-          <span>Seg</span>
-          <span>Ter</span>
-          <span>Qua</span>
-          <span>Qui</span>
-          <span>Sex</span>
-          <span>Sab</span>
-          <span>Dom</span>
+          <span *ngFor="let d of diasSemana">{{ d }}</span>
         </div>
 
-        <!-- Dias -->
+        <!-- Dias do mês -->
         <div class="mini-calendario-dias">
           <div
             class="dia-calendario"
             *ngFor="let dia of diasCalendario"
             [class.desabilitado]="dia.desabilitado"
             [class.selecionado]="dia.selecionado"
+            [class.placeholder]="dia.placeholder"
             (click)="toggleDiaCalendario(dia)"
           >
-            {{ dia.numero }}
+            <!-- placeholders ficam vazios pra alinhar como no datepicker -->
+            <span *ngIf="!dia.placeholder">{{ dia.numero }}</span>
           </div>
         </div>
       </div>
 
       <small class="mini-calendario-legenda">
-        Somente <strong>dias úteis futuros</strong> estão habilitados. Você pode marcar
-        mais de um dia.
+        Somente <strong>dias úteis futuros</strong> estão habilitados. Você pode marcar mais de um dia.
       </small>
     </div>
     <!-- FIM NOVO CALENDÁRIO -->
@@ -125,6 +121,10 @@
           <p>Entrada: {{ viagem.horarioEntrada }}</p>
           <p>Saída: {{ viagem.horarioSaida }}</p>
           <p>Ajuda Mensal: R$ {{ viagem.ajudaDeCusto }}</p>
+          <!-- Dias em que esta rota é válida -->
+          <p *ngIf="formatDiasViagem(viagem)">
+            Dias desta rota: {{ formatDiasViagem(viagem) }}
+          </p>      
 
           <!-- NOVO: dias de aula/agendamento (se o back enviar) -->
           <p *ngIf="viagem.diasAgendados?.length" class="dias-aula">

@@ -67,6 +67,10 @@
   background-color: #1e293b;
 }
 
+.mapa-wrapper {
+  position: relative;
+}
+
 .mapa-container {
   width: 100%;
   height: 500px;
@@ -355,49 +359,7 @@ a:hover {
   margin: 15px auto 0 auto;
 }
 
-/* ===== Botões de exportação / estados ===== */
-
-.botao-centro {
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn-mapa.primary {
-  background-color: #2563eb;
-  border: 1px solid #2563eb;
-  color: #fff;
-}
-
-.btn-mapa:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-mapa .icon {
-  width: 18px;
-  height: 18px;
-  margin-right: 6px;
-  vertical-align: -3px;
-}
-
-/* Cards/listas “Minhas Caronas” – melhor respiro */
-.caronas-bloco li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Botão excluir alinha melhor em telas pequenas também */
-.excluir-carona {
-  white-space: nowrap;
-}
-
-/* ===== Overlay de carregamento do mapa ===== */
-
-.mapa-wrapper {
-  position: relative;
-}
+/* ===== Overlay de carregamento no mapa ===== */
 
 .loading-overlay {
   position: absolute;
@@ -418,38 +380,13 @@ a:hover {
   align-items: center;
 }
 
-/* spinner genérico (pode ser usado em outros lugares) */
 .spinner {
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-/* spinner específico dentro do overlay do mapa */
-.loading-overlay .spinner {
   width: 38px;
   height: 38px;
   border: 3px solid #fff;
   border-top-color: transparent;
-}
-
-/* se você usar .carregando-overlay em outra tela, mantém o visual antigo */
-.carregando-overlay {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 60vh;
-  text-align: center;
-  color: #0f172a;
-  font-family: 'Poppins', sans-serif;
-}
-
-.carregando-overlay .spinner {
-  border: 4px solid #e5e7eb;
-  border-top: 4px solid #2563eb;
-  width: 50px;
-  height: 50px;
-  margin-bottom: 12px;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
@@ -479,9 +416,35 @@ a:hover {
   margin-top: 8px;
   background-color: #0f172a;
   border-radius: 10px;
-  padding: 12px;
+  padding: 12px 16px 16px;
 }
 
+/* topo com mês (tipo datepicker) */
+.mini-calendario-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.mini-calendario-mes {
+  color: #e5e7eb;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* cabeçalho dias da semana */
+.mini-calendario-semana {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 6px;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+/* grid dos dias */
 .mini-calendario-dias {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -500,8 +463,7 @@ a:hover {
   color: #0f172a;
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.15s ease, color 0.15s ease,
-    box-shadow 0.15s ease, transform 0.05s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
 
 .dia-calendario:hover {
@@ -510,10 +472,18 @@ a:hover {
 }
 
 .dia-calendario.desabilitado {
-  background-color: #f1f5f9;
-  color: #94a3b8;
+  background-color: #111827;
+  color: #4b5563;
   cursor: not-allowed;
   opacity: 0.7;
+  box-shadow: none;
+  transform: none;
+}
+
+/* células vazias só pra alinhar como o calendário de nascimento */
+.dia-calendario.placeholder {
+  background: transparent;
+  cursor: default;
   box-shadow: none;
   transform: none;
 }
@@ -532,7 +502,7 @@ a:hover {
   color: #64748b;
 }
 
-/* ================= Responsividade ================= */
+/* ===== Responsividade geral ===== */
 
 @media (max-width: 768px) {
   .linha-horizontal {
@@ -572,16 +542,20 @@ a:hover {
   }
 
   .botao-centro {
-    justify-content: stretch;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 
   .btn-mapa {
     width: 100%;
     border-radius: 12px;
   }
+}
 
+/* Responsivo extra pro mini calendário */
+@media (max-width: 768px) {
   .mini-calendario-dias {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(7, 1fr);
   }
 
   .dia-calendario {
@@ -593,4 +567,25 @@ a:hover {
   .calendario-container {
     padding: 12px;
   }
+}
+
+/* Variação “primária” azul (se usar) */
+.btn-mapa.primary {
+  background-color: #2563eb;
+  border: 1px solid #2563eb;
+  color: #fff;
+}
+
+/* Estado desabilitado (enquanto carrega/sem dados) */
+.btn-mapa:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* Ícones nos botões (se colocar) */
+.btn-mapa .icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  vertical-align: -3px;
 }
