@@ -93,14 +93,17 @@
         <div class="calendario-header">
           <span class="calendario-mes">{{ mesAtualLabel }}</span>
           <span class="calendario-legenda">
-            Clique nos dias do mês para selecionar.
-            Domingos e dias passados ficam desativados.
+            Clique nos dias do mês para selecionar. Domingos e dias passados
+            ficam desativados.
           </span>
         </div>
 
         <div class="calendario-grid">
           <!-- cabeçalho dias da semana -->
-          <div class="calendario-weekday" *ngFor="let diaSem of ['D','S','T','Q','Q','S','S']">
+          <div
+            class="calendario-weekday"
+            *ngFor="let diaSem of ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']"
+          >
             {{ diaSem }}
           </div>
 
@@ -132,9 +135,15 @@
           </button>
         </span>
       </div>
+
+      <div class="botao-centro">
+        <button class="btn-mapa primary" type="submit">
+          Cadastrar Rota
+        </button>
+      </div>
     </div>
     <!-- FIM calendário -->
-    </form>
+  </form>
 
   <!-- Mapa SEMPRE no DOM + overlay de carregamento -->
   <div class="mapa-wrapper">
