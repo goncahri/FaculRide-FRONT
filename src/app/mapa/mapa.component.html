@@ -65,45 +65,51 @@
       </div>
     </div>
 
-    <!-- Calendário multi-seleção -->
+        <!-- Calendário simples -->
     <div class="calendario-container">
       <label>Selecione os dias em que esta rota será válida</label>
 
-      <p-calendar
-        [(ngModel)]="datasCalendar"
-        name="datasCalendar"
-        selectionMode="multiple"
-        [inline]="true"
-        [minDate]="minDate"
-        [maxDate]="maxDate"
-        [disabledDays]="disabledDays"
-        dateFormat="dd/mm/yy">
-      </p-calendar>
+      <!-- “Input” fake que abre/fecha o calendário -->
+      <div class="calendario-trigger" (click)="toggleCalendario()">
+        <span *ngIf="datasRota.length === 0">
+          Clique para escolher os dias
+        </span>
 
-      <small class="mini-calendario-legenda">
-        Clique nos dias do mês para selecionar. Apenas
-        <strong>dias futuros (sem domingos)</strong> são aceitos.
-      </small>
+        <span *ngIf="datasRota.length === 1">
+          Dia selecionado: {{ formatarDataTag(datasRota[0]) }}
+        </span>
 
-      <div class="botao-centro" style="margin-top: 16px;">
-        <button type="button" class="btn-mapa" (click)="confirmarDatasSelecionadas()">
-          Confirmar dias selecionados
-        </button>
+        <span *ngIf="datasRota.length > 1">
+          {{ datasRota.length }} dias selecionados
+        </span>
+
+        <span class="seta-calendario">
+          {{ mostrarCalendario ? '▲' : '▼' }}
+        </span>
       </div>
 
-      <!-- tags com os dias confirmados -->
+      <!-- AQUI DENTRO vai o SEU calendário (Su Mo Tu We...) -->
+      <!-- Pegue o grid que você já tem e coloque aqui dentro -->
+      <div class="calendario-popup" *ngIf="mostrarCalendario">
+        <!-- SEU CALENDÁRIO ATUAL -->
+        <!-- exemplo: <table>SuMoTuWeThFrSa ...</table> -->
+      </div>
+
+      <!-- tags com os dias escolhidos (mantém como já estava) -->
       <div class="datas-selecionadas" *ngIf="datasRota.length">
         <span class="tag-data" *ngFor="let d of datasRota">
           {{ formatarDataTag(d) }}
-          <button type="button" class="tag-remover" (click)="removerDataRota(d)">×</button>
+          <button
+            type="button"
+            class="tag-remover"
+            (click)="removerDataRota(d)"
+          >
+            ×
+          </button>
         </span>
       </div>
     </div>
-
-    <div class="botao-centro">
-      <button type="submit" class="btn-mapa">Cadastrar Rota</button>
-    </div>
-  </form>
+    <!-- FIM calendário simples -->
 
   <!-- Mapa SEMPRE no DOM + overlay de carregamento -->
   <div class="mapa-wrapper">

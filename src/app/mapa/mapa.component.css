@@ -517,6 +517,38 @@ a:hover {
   }
 }
 
+.calendario-trigger {
+  margin-top: 8px;
+  margin-bottom: 10px;
+  background: #0f172a;
+  border-radius: 999px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #e5e7eb;
+  cursor: pointer;
+  border: 1px solid #1f2937;
+}
+
+.calendario-trigger:hover {
+  border-color: #3b82f6;
+}
+
+.seta-calendario {
+  font-size: 0.8rem;
+  margin-left: 8px;
+}
+
+.calendario-popup {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #e5e7eb;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
 /* Variação “primária” azul (se usar) */
 .btn-mapa.primary {
   background-color: #2563eb;

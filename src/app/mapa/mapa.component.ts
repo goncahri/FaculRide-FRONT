@@ -55,6 +55,8 @@ export class MapaComponent implements AfterViewInit, OnInit {
   maxDate: Date;                   // fim: último dia do mês atual
   disabledDays: number[] = [0];    // desabilita domingo (0)
 
+  // controla se o calendário aparece ou não
+  mostrarCalendario: boolean = false;
   // ====================================================
 
   // Dados das viagens
@@ -91,6 +93,11 @@ export class MapaComponent implements AfterViewInit, OnInit {
 
     // último dia do mês atual
     this.maxDate = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+  }
+
+  // abre/fecha o calendário quando clicar no botão
+  toggleCalendario(): void {
+    this.mostrarCalendario = !this.mostrarCalendario;
   }
 
   ngOnInit(): void {
