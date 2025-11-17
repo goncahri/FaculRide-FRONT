@@ -17,11 +17,12 @@ export class MapaComponent implements AfterViewInit, OnInit {
   map!: google.maps.Map;
   directionsRenderer!: google.maps.DirectionsRenderer;
 
-  // ===== Marcadores no mapa =====
+  // ===== marcadores no mapa =====
   markers: google.maps.Marker[] = [];
   infoWindow!: google.maps.InfoWindow;
+  // ==============================
 
-  // ===== Spinner / estado de carregamento =====
+  // ===== Spinner/estado de carregamento =====
   carregando: boolean = true;
   private _loads = { usuarios: false, viagens: false, avaliacoes: false };
   private markLoaded(key: 'usuarios' | 'viagens' | 'avaliacoes') {
@@ -30,8 +31,9 @@ export class MapaComponent implements AfterViewInit, OnInit {
       this.carregando = false;
     }
   }
+  // =========================================
 
-  // ===== Dados do formulário =====
+  // Dados do formulário
   tipoCarona: string = 'oferecer';
   origem: string = '';
   destino: string = '';
@@ -39,11 +41,11 @@ export class MapaComponent implements AfterViewInit, OnInit {
   saidaFatec: string = '';
   ajudaCusto: number | null = null;
 
-  // === NOVO: calendário simples, igual cadastro (input date) ===
-  hojeISO: string = new Date().toISOString().split('T')[0];   // para min
-  dataRota: string = '';                                      // value do input
-  datasRota: string[] = [];                                   // lista de dias da rota
-  // ============================================================
+  // ===== Calendário simples (tipo dataNascimento) =====
+  hojeISO: string = new Date().toISOString().split('T')[0]; // min do input date
+  dataRota: string = '';          // valor do input <input type="date">
+  datasRota: string[] = [];       // lista de datas selecionadas (YYYY-MM-DD)
+  // ====================================================
 
   // Dados das viagens
   viagens: any[] = [];
@@ -61,19 +63,16 @@ export class MapaComponent implements AfterViewInit, OnInit {
   avaliacoesEnviadas: any[] = [];
   usuarios: any[] = [];
 
-  // Config API
+  // Configuração da API
   baseURL = isBrowser() && window.location.hostname.includes('localhost')
     ? 'http://localhost:3000/api'
     : 'https://projeto-faculride.onrender.com/api';
 
   usuarioLogado = isBrowser() ? JSON.parse(localStorage.getItem('usuarioLogado') || '{}') : {};
+  // Normaliza para número (evita comparação string vs number)
   meuId = Number(this.usuarioLogado.idUsuario || this.usuarioLogado.id);
 
   constructor(private http: HttpClient) {}
-
-  // ============================================================
-  // CICLO DE VIDA
-  // ============================================================
 
   ngOnInit(): void {
     this.carregando = true;
@@ -102,13 +101,10 @@ export class MapaComponent implements AfterViewInit, OnInit {
     this.directionsRenderer.setMap(this.map);
 
     this.infoWindow = new google.maps.InfoWindow();
-    this.atualizarMarcadoresViagens();
+    this.atualizarMarcadoresViagens(); // caso as viagens já tenham carregado
   }
 
-  // ============================================================
-  // TIPOS / USUÁRIOS
-  // ============================================================
-
+  // Helper para obter tipo normalizado.
   public tipoNormalizado(v: any): 'motorista' | 'passageiro' {
     const fromViagem = (v?.usuario?.tipoUsuario ?? v?.tipoUsuario ?? '')
       .toString()
@@ -130,6 +126,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
     return fromUsuario === 'motorista' ? 'motorista' : 'passageiro';
   }
 
+  // Normalização de usuários
   private normalizeUsuario(u: any) {
     const bruto = (u?.tipoUsuario ?? u?.tipo_usuario ?? u?.tipo ?? '')
       .toString()
@@ -141,59 +138,16 @@ export class MapaComponent implements AfterViewInit, OnInit {
         ? bruto
         : (u?.tipoUsuario ?? u?.tipo_usuario ?? '').toString().toLowerCase();
 
-    return { ...u, tipoUsuario };
+    return {
+      ...u,
+      tipoUsuario
+    };
   }
-
-  carregarUsuarios(): void {
-    this.http.get<any[]>(`${this.baseURL}/usuario`).subscribe({
-      next: (res) => {
-        this.usuarios = Array.isArray(res) ? res.map(u => this.normalizeUsuario(u)) : [];
-
-        if (this.avaliacoesRecebidas?.length) {
-          this.avaliacoesRecebidas = this.avaliacoesRecebidas.map((a: any) => ({
-            ...a,
-            nomeAvaliador: this.pegarNomeUsuario(a.ID_Avaliador),
-          }));
-        }
-
-        if (this.avaliacoesEnviadas?.length) {
-          this.avaliacoesEnviadas = this.avaliacoesEnviadas.map((a: any) => ({
-            ...a,
-            nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado),
-          }));
-        }
-
-        this.markLoaded('usuarios');
-      },
-      error: (err) => {
-        console.error('Erro ao carregar usuários:', err);
-        this.markLoaded('usuarios');
-      },
-    });
-  }
-
-  pegarNomeUsuario(id: number): string {
-    const usuario = this.usuarios.find(u => u.id === id || u.idUsuario === id);
-    return usuario ? usuario.nome : 'Usuário';
-  }
-
-  obterFotoUsuario(email: string, genero: any): string {
-    const u = this.usuarios.find(x => x?.email?.trim().toLowerCase() === (email || '').trim().toLowerCase());
-    const url = u?.foto || u?.fotoUrl;
-    if (url) return url;
-    if (genero === true) return 'assets/profile_man.jpeg';
-    if (genero === false) return 'assets/profile_woman.jpeg';
-    return 'assets/usuario.png';
-  }
-
-  // ============================================================
-  // VIAGENS
-  // ============================================================
 
   carregarViagens(): void {
     this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
       next: (res) => {
-        this.viagens = res || [];
+        this.viagens = res;
 
         this.caronasOferecidas = this.viagens
           .filter(v => Number(v.idUsuario) === this.meuId && this.tipoNormalizado(v) === 'motorista')
@@ -225,33 +179,70 @@ export class MapaComponent implements AfterViewInit, OnInit {
     });
   }
 
-  // ========= NOVO: lógica do calendário simples =========
+  carregarUsuarios(): void {
+    this.http.get<any[]>(`${this.baseURL}/usuario`).subscribe({
+      next: (res) => {
+        this.usuarios = Array.isArray(res) ? res.map(u => this.normalizeUsuario(u)) : [];
 
-  /** Chamado no (change) do input type="date" */
+        if (this.avaliacoesRecebidas?.length) {
+          this.avaliacoesRecebidas = this.avaliacoesRecebidas.map((a: any) => ({
+            ...a,
+            nomeAvaliador: this.pegarNomeUsuario(a.ID_Avaliador),
+          }));
+        }
+
+        if (this.avaliacoesEnviadas?.length) {
+          this.avaliacoesEnviadas = this.avaliacoesEnviadas.map((a: any) => ({
+            ...a,
+            nomeAvaliado: this.pegarNomeUsuario(a.ID_Avaliado),
+          }));
+        }
+
+        this.markLoaded('usuarios');
+      },
+      error: (err) => {
+        console.error('Erro ao carregar usuários:', err);
+        this.markLoaded('usuarios');
+      },
+    });
+  }
+
+  // =============== LÓGICA DO CALENDÁRIO SIMPLES (INPUT DATE) ===============
+
   adicionarDataRota(): void {
     if (!this.dataRota) return;
 
-    // impede datas passadas
-    if (this.dataRota < this.hojeISO) {
+    // espera formato YYYY-MM-DD
+    const dataStr = this.dataRota;
+    const data = new Date(dataStr + 'T00:00:00');
+
+    if (isNaN(data.getTime())) {
+      alert('Data inválida.');
+      this.dataRota = '';
+      return;
+    }
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    if (data <= hoje) {
       alert('Escolha apenas datas futuras.');
       this.dataRota = '';
       return;
     }
 
-    const d = new Date(this.dataRota);
-    const diaSemana = d.getDay(); // 0 dom, 6 sab
+    const diaSemana = data.getDay(); // 0 dom, 6 sáb
     if (diaSemana === 0 || diaSemana === 6) {
-      alert('Selecione apenas dias úteis (segunda a sexta).');
+      alert('Apenas dias úteis são aceitos.');
       this.dataRota = '';
       return;
     }
 
-    if (!this.datasRota.includes(this.dataRota)) {
-      this.datasRota.push(this.dataRota);
-      this.datasRota.sort(); // mantém ordenado
+    if (!this.datasRota.includes(dataStr)) {
+      this.datasRota.push(dataStr);
     }
 
-    // limpa o input mas mantém as tags embaixo
+    // limpa o input
     this.dataRota = '';
   }
 
@@ -259,53 +250,14 @@ export class MapaComponent implements AfterViewInit, OnInit {
     this.datasRota = this.datasRota.filter(d => d !== data);
   }
 
-  formatarDataTag(iso: string): string {
-    // yyyy-mm-dd -> dd/mm
-    const [ano, mes, dia] = iso.split('-');
+  formatarDataTag(d: string): string {
+    // d vem como 'YYYY-MM-DD'
+    if (!d || d.length < 10) return d;
+    const [ano, mes, dia] = d.split('-');
     return `${dia}/${mes}`;
   }
 
-  /** Lê as datas de uma viagem v (seu campo datasAgendadas) e devolve texto bonitinho. */
-  formatarDiasViagem(v: any): string {
-    const lista = this.extrairDatasViagem(v);
-    if (!lista.length) return '';
-
-    const formatadas = lista.map(iso => this.formatarDataTag(iso));
-    return `Dias de aula: ${formatadas.join(', ')}`;
-  }
-
-  /** Tenta extrair array de strings ISO de datas da viagem (vindo do back). */
-  private extrairDatasViagem(v: any): string[] {
-    let bruto: any = v?.datasAgendadas ?? v?.datas_agendadas ?? v?.diasRota ?? [];
-
-    if (!bruto) return [];
-
-    if (Array.isArray(bruto)) {
-      return bruto.map((x: any) => String(x)).filter(Boolean);
-    }
-
-    if (typeof bruto === 'string') {
-      // tenta JSON
-      try {
-        const parsed = JSON.parse(bruto);
-        if (Array.isArray(parsed)) {
-          return parsed.map((x: any) => String(x)).filter(Boolean);
-        }
-      } catch {
-        // não era JSON; tenta separado por vírgula
-        if (bruto.includes(',')) {
-          return bruto.split(',').map(x => x.trim()).filter(Boolean);
-        }
-        if (bruto.length >= 10) {
-          return [bruto.substring(0, 10)];
-        }
-      }
-    }
-
-    return [];
-  }
-
-  // ========= Cadastro da rota =========
+  // ===================================================================
 
   tracarRota(): void {
     if (!this.origem || !this.destino || !this.entradaFatec || !this.saidaFatec) {
@@ -313,11 +265,12 @@ export class MapaComponent implements AfterViewInit, OnInit {
       return;
     }
 
-    // se não tiver nenhuma data, pergunta se quer prosseguir mesmo assim
-    if (!this.datasRota.length) {
+    // usa as datasRota (selecionadas no calendário simples)
+    const datasSelecionadas = this.datasRota;
+    if (!datasSelecionadas.length) {
       const continuar = confirm(
-        'Você não selecionou nenhuma data da rota.\n' +
-        'Deseja cadastrar assim mesmo?'
+        'Você não selecionou nenhuma data.\n' +
+        'Deseja cadastrar a rota mesmo assim?'
       );
       if (!continuar) return;
     }
@@ -330,18 +283,16 @@ export class MapaComponent implements AfterViewInit, OnInit {
       horarioSaida: this.saidaFatec,
       ajudaDeCusto: this.ajudaCusto ? this.ajudaCusto.toString() : '0',
       idUsuario: this.meuId,
-      // NOVO: envia lista de datas da rota
-      datasAgendadas: this.datasRota
+      // NOVO: envia as datas agendadas (back pode salvar como quiser)
+      datasAgendadas: datasSelecionadas
     };
 
     this.http.post(`${this.baseURL}/viagem`, dadosViagem).subscribe({
       next: () => {
         alert('Rota cadastrada com sucesso!');
         this.carregarViagens();
-        // limpa apenas campos de rota, se quiser
-        // this.origem = ''; this.destino = ''; ...
-        this.datasRota = [];
-        this.dataRota = '';
+        // se quiser limpar as datas depois de cadastrar:
+        // this.datasRota = [];
       },
       error: (err) => {
         console.error('Erro ao cadastrar viagem:', err);
@@ -349,7 +300,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
       }
     });
 
-    // desenha no mapa
     if (isBrowser()) {
       const request: google.maps.DirectionsRequest = {
         origin: this.origem,
@@ -364,40 +314,22 @@ export class MapaComponent implements AfterViewInit, OnInit {
   }
 
   mostrarRota(partida: string, destino: string): void {
-    if (!isBrowser()) return;
-
-    const directionsService = new google.maps.DirectionsService();
-    const request: google.maps.DirectionsRequest = {
-      origin: partida,
-      destination: destino,
-      travelMode: google.maps.TravelMode.DRIVING
-    };
-    directionsService.route(request, (result, status) => {
-      if (status === 'OK' && result) this.directionsRenderer.setDirections(result);
-    });
-    setTimeout(
-      () => this.mapContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' }),
-      100
-    );
+    if (isBrowser()) {
+      const directionsService = new google.maps.DirectionsService();
+      const request: google.maps.DirectionsRequest = {
+        origin: partida,
+        destination: destino,
+        travelMode: google.maps.TravelMode.DRIVING
+      };
+      directionsService.route(request, (result, status) => {
+        if (status === 'OK' && result) this.directionsRenderer.setDirections(result);
+      });
+      setTimeout(
+        () => this.mapContainer.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+        100
+      );
+    }
   }
-
-  excluirCarona(idViagem: number) {
-    if (!confirm('Tem certeza que deseja excluir esta carona?')) return;
-    this.http.delete(`${this.baseURL}/viagem/${idViagem}`).subscribe({
-      next: () => {
-        alert('Carona excluída com sucesso!');
-        this.carregarViagens();
-      },
-      error: (err) => {
-        console.error('Erro ao excluir carona:', err);
-        alert('Erro ao excluir carona. Tente novamente.');
-      }
-    });
-  }
-
-  // ============================================================
-  // AVALIAÇÕES
-  // ============================================================
 
   abrirWhatsapp(nome: string, idUsuario: number, numeroWhatsapp: string) {
     if (!numeroWhatsapp) return alert('Número de WhatsApp não disponível');
@@ -453,9 +385,55 @@ export class MapaComponent implements AfterViewInit, OnInit {
     });
   }
 
-  // ============================================================
-  // MAPA – marcadores
-  // ============================================================
+  pegarNomeUsuario(id: number): string {
+    const usuario = this.usuarios.find(u => u.id === id || u.idUsuario === id);
+    return usuario ? usuario.nome : 'Usuário';
+  }
+
+  obterFotoUsuario(email: string, genero: any): string {
+    const u = this.usuarios.find(x => x?.email?.trim().toLowerCase() === (email || '').trim().toLowerCase());
+    const url = u?.foto || u?.fotoUrl;
+    if (url) return url;
+    if (genero === true) return 'assets/profile_man.jpeg';
+    if (genero === false) return 'assets/profile_woman.jpeg';
+    return 'assets/usuario.png';
+  }
+
+  excluirCarona(idViagem: number) {
+    if (!confirm('Tem certeza que deseja excluir esta carona?')) return;
+    this.http.delete(`${this.baseURL}/viagem/${idViagem}`).subscribe({
+      next: () => {
+        alert('Carona excluída com sucesso!');
+        this.carregarViagens();
+      },
+      error: (err) => {
+        console.error('Erro ao excluir carona:', err);
+        alert('Erro ao excluir carona. Tente novamente.');
+      }
+    });
+  }
+
+  // ========= Exibir dias da rota no card (usado no HTML) =========
+  formatDiasViagem(v: any): string {
+    // tenta diasAgendados (nome que o back pode usar)
+    if (Array.isArray(v?.diasAgendados) && v.diasAgendados.length) {
+      return v.diasAgendados.map((d: string) => this.formatarDataTag(d)).join(', ');
+    }
+
+    // tenta datasAgendadas (nome que estamos enviando)
+    if (Array.isArray(v?.datasAgendadas) && v.datasAgendadas.length) {
+      return v.datasAgendadas.map((d: string) => this.formatarDataTag(d)).join(', ');
+    }
+
+    // se o back mandar uma string pronta, só devolve
+    if (typeof v?.dias === 'string' && v.dias.trim().length) {
+      return v.dias;
+    }
+
+    return '';
+  }
+
+  // ===================== Marcadores de viagens no mapa =====================
 
   private atualizarMarcadoresViagens(): void {
     if (!isBrowser()) return;
@@ -494,8 +472,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
               ? 'Motorista (oferece carona)'
               : 'Passageiro (procura carona)';
 
-            const diasTxt = this.formatarDiasViagem(v);
-
             const conteudo =
               `<div style="min-width:220px;font-family:Arial, sans-serif;font-size:12px;">
                 <div style="font-weight:bold;font-size:13px;margin-bottom:2px;">${nome}</div>
@@ -505,7 +481,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
                   <div><strong>Destino:</strong> ${destinoLabel}</div>
                   <div><strong>Entrada:</strong> ${entrada}</div>
                   <div><strong>Saída:</strong> ${saida}</div>
-                  ${diasTxt ? `<div><strong>${diasTxt}</strong></div>` : ''}
                 </div>
                 <button id="btnMostrarRotaMarker"
                         style="margin-top:4px;padding:4px 8px;border:none;border-radius:4px;
@@ -531,9 +506,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
     });
   }
 
-  // ============================================================
-  // EXPORTAÇÃO PDF / EXCEL
-  // ============================================================
+  // ===================== EXPORTAÇÃO (PDF / EXCEL) =====================
 
   private getCaronasParaExportar() {
     const oferecidas = (this.caronasOferecidas || []).map(c => ({
@@ -569,7 +542,10 @@ export class MapaComponent implements AfterViewInit, OnInit {
     const body = linhas.map(l => [l.Partida, l.Destino, l.Entrada, l.Saida, l.Ajuda, l.Tipo]);
 
     autoTable(doc, {
-      head, body, startY: 70, theme: 'grid',
+      head,
+      body,
+      startY: 70,
+      theme: 'grid',
       styles: { fontSize: 10, cellPadding: 6 },
       headStyles: { fillColor: [43, 140, 255], textColor: 255 }
     });
