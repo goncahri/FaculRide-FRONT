@@ -65,7 +65,7 @@
       </div>
     </div>
 
-        <!-- Calendário simples -->
+    <!-- Calendário simples -->
     <div class="calendario-container">
       <label>Selecione os dias em que esta rota será válida</label>
 
@@ -88,14 +88,12 @@
         </span>
       </div>
 
-      <!-- AQUI DENTRO vai o SEU calendário (Su Mo Tu We...) -->
-      <!-- Pegue o grid que você já tem e coloque aqui dentro -->
+      <!-- AQUI ENTRA SEU CALENDÁRIO NOVO -->
       <div class="calendario-popup" *ngIf="mostrarCalendario">
-        <!-- SEU CALENDÁRIO ATUAL -->
-        <!-- exemplo: <table>SuMoTuWeThFrSa ...</table> -->
+        <!-- substitua por tabela/grid -->
       </div>
 
-      <!-- tags com os dias escolhidos (mantém como já estava) -->
+      <!-- tags com os dias escolhidos -->
       <div class="datas-selecionadas" *ngIf="datasRota.length">
         <span class="tag-data" *ngFor="let d of datasRota">
           {{ formatarDataTag(d) }}
@@ -110,6 +108,7 @@
       </div>
     </div>
     <!-- FIM calendário simples -->
+  </form> <!-- <<< FORM FECHADO AQUI !!! -->
 
   <!-- Mapa SEMPRE no DOM + overlay de carregamento -->
   <div class="mapa-wrapper">
@@ -144,45 +143,24 @@
           </div>
 
           <strong>{{ viagem.usuario?.nome || 'Usuário' }}</strong>
-          <p>
-            {{ tipoNormalizado(viagem) === 'motorista' ? 'motorista' :
-            'passageiro' }}
-          </p>
+          <p>{{ tipoNormalizado(viagem) === 'motorista' ? 'motorista' : 'passageiro' }}</p>
           <p>Partida: {{ viagem.partida }}</p>
           <p>Destino: {{ viagem.destino }}</p>
           <p>Entrada: {{ viagem.horarioEntrada }}</p>
           <p>Saída: {{ viagem.horarioSaida }}</p>
           <p>Ajuda Mensal: R$ {{ viagem.ajudaDeCusto }}</p>
 
-            <!-- Dias desta rota (apenas uma vez) -->
-            <p
-              *ngIf="(viagem.diasAgendados?.length || viagem.datasRota?.length)"
-              class="dias-aula"
-            >
-              Dias desta rota:
-              <span
-                class="chip-dia"
-                *ngFor="let d of (viagem.diasAgendados || viagem.datasRota)"
-              >
-                {{ d | date: 'dd/MM' }}
-              </span>
-            </p>
+          <p *ngIf="(viagem.diasAgendados?.length || viagem.datasRota?.length)" class="dias-aula">
+            Dias desta rota:
+            <span class="chip-dia" *ngFor="let d of (viagem.diasAgendados || viagem.datasRota)">
+              {{ d | date: 'dd/MM' }}
+            </span>
+          </p>
 
-          <button (click)="mostrarRota(viagem.partida, viagem.destino)">
-            Ver rota
-          </button>
-          <a
-            (click)="abrirWhatsapp(
-              viagem.usuario?.nome,
-              viagem.idUsuario,
-              viagem.usuario?.telefone
-            )"
-          >
-            <img
-              src="assets/whats1.png"
-              class="whatsapp-icon"
-              alt="WhatsApp"
-            />
+          <button (click)="mostrarRota(viagem.partida, viagem.destino)">Ver rota</button>
+
+          <a (click)="abrirWhatsapp(viagem.usuario?.nome, viagem.idUsuario, viagem.usuario?.telefone)">
+            <img src="assets/whats1.png" class="whatsapp-icon" alt="WhatsApp" />
             Entrar em contato
           </a>
         </div>
@@ -197,12 +175,7 @@
 
     <div class="estrelas">
       <label *ngFor="let nota of [5, 4, 3, 2, 1]">
-        <input
-          type="radio"
-          name="avaliacao"
-          [value]="nota"
-          [(ngModel)]="avaliacaoSelecionada"
-        />
+        <input type="radio" name="avaliacao" [value]="nota" [(ngModel)]="avaliacaoSelecionada" />
         <span class="estrela">&#9733;</span>
         <div class="numero-estrela">{{ nota }}</div>
       </label>
@@ -215,9 +188,7 @@
       placeholder="Deixe seu comentário sobre a carona"
     ></textarea>
 
-    <button (click)="enviarAvaliacao()" class="btn-enviar">
-      Enviar Avaliação
-    </button>
+    <button (click)="enviarAvaliacao()" class="btn-enviar">Enviar Avaliação</button>
   </div>
 
   <!-- Faixa Minhas Caronas -->
@@ -234,16 +205,9 @@
         <p><strong>Saída:</strong> {{ c.saida }}</p>
         <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
 
-        <!-- Datas da rota: tenta diasAgendados OU datasRota -->
-        <p
-          *ngIf="(c.diasAgendados?.length || c.datasRota?.length)"
-          class="dias-aula"
-        >
+        <p *ngIf="(c.diasAgendados?.length || c.datasRota?.length)" class="dias-aula">
           <strong>Dias desta rota:</strong>
-          <span
-            class="chip-dia"
-            *ngFor="let d of (c.diasAgendados || c.datasRota)"
-          >
+          <span class="chip-dia" *ngFor="let d of (c.diasAgendados || c.datasRota)">
             {{ d | date: 'dd/MM' }}
           </span>
         </p>
@@ -260,27 +224,16 @@
         <p><strong>Saída:</strong> {{ c.saida }}</p>
         <p><strong>Ajuda Mensal:</strong> R$ {{ c.ajuda }}</p>
 
-        <!-- Datas da rota: tenta diasAgendados OU datasRota -->
-        <p
-          *ngIf="(c.diasAgendados?.length || c.datasRota?.length)"
-          class="dias-aula"
-        >
+        <p *ngIf="(c.diasAgendados?.length || c.datasRota?.length)" class="dias-aula">
           <strong>Dias desta rota:</strong>
-          <span
-            class="chip-dia"
-            *ngFor="let d of (c.diasAgendados || c.datasRota)"
-          >
+          <span class="chip-dia" *ngFor="let d of (c.diasAgendados || c.datasRota)">
             {{ d | date: 'dd/MM' }}
           </span>
         </p>
       </div>
     </div>
 
-    <!-- Mensagem caso não tenha caronas -->
-    <div
-      *ngIf="caronasOferecidas.length === 0 && caronasProcuradas.length === 0"
-      style="color: white;"
-    >
+    <div *ngIf="caronasOferecidas.length === 0 && caronasProcuradas.length === 0" style="color: white;">
       Você não tem caronas registradas.
     </div>
   </div>
@@ -296,9 +249,7 @@
     </p>
     <div class="botao-centro export-actions">
       <button class="btn-mapa" (click)="exportarPDF()">Exportar PDF</button>
-      <button class="btn-mapa primary" (click)="exportarExcel()">
-        Exportar Excel
-      </button>
+      <button class="btn-mapa primary" (click)="exportarExcel()">Exportar Excel</button>
     </div>
   </div>
 
@@ -336,9 +287,7 @@
     </div>
 
     <div
-      *ngIf="
-        avaliacoesRecebidas.length === 0 && avaliacoesEnviadas.length === 0
-      "
+      *ngIf="avaliacoesRecebidas.length === 0 && avaliacoesEnviadas.length === 0"
       style="color: white;"
     >
       Você não tem avaliações registradas.
