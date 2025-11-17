@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { isBrowser } from '../utils/is-browser';
+import { CalendarModule } from 'primeng/calendar';
 
 @Component({
   selector: 'app-mapa',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CalendarModule],
   templateUrl: './mapa.component.html',
   styleUrls: ['./mapa.component.css']
 })
@@ -41,18 +42,19 @@ export class MapaComponent implements AfterViewInit, OnInit {
   saidaFatec: string = '';
   ajudaCusto: number | null = null;
 
-  // ===== Calendário simples =====
-  private hoje = new Date();
-  private mesAtual = this.hoje.getMonth();       // 0 = janeiro
-  private anoAtual = this.hoje.getFullYear();
+  // ===== NOVO CALENDÁRIO (PrimeNG) =====
+  // modelo do calendário (datas clicadas visualmente)
+  datasCalendar: Date[] = [];
 
-  // limites do mês atual (usados no [min]/[max] do input)
-  primeiroDiaMesISO: string = this.toISO(new Date(this.anoAtual, this.mesAtual, 1));
-  ultimoDiaMesISO: string = this.toISO(new Date(this.anoAtual, this.mesAtual + 1, 0));
+  // ainda mantemos datasRota como array de string YYYY-MM-DD (usado no back)
+  hojeISO: string = new Date().toISOString().split('T')[0];
+  dataRota: string = '';           // não usamos mais no HTML, mas não atrapalha
+  datasRota: string[] = [];        // lista final de datas selecionadas (ordenadas)
 
-  dataRota: string = '';          // valor do input <input type="date">
-  datasRota: string[] = [];       // lista de datas selecionadas (YYYY-MM-DD)
-  datasConfirmadas: boolean = false;
+  minDate: Date;                   // início: amanhã
+  maxDate: Date;                   // fim: último dia do mês atual
+  disabledDays: number[] = [0];    // desabilita domingo (0)
+
   // ====================================================
 
   // Dados das viagens
@@ -77,10 +79,19 @@ export class MapaComponent implements AfterViewInit, OnInit {
     : 'https://projeto-faculride.onrender.com/api';
 
   usuarioLogado = isBrowser() ? JSON.parse(localStorage.getItem('usuarioLogado') || '{}') : {};
-  // Normaliza para número (evita comparação string vs number)
   meuId = Number(this.usuarioLogado.idUsuario || this.usuarioLogado.id);
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    // configura faixas do calendário: só mês atual, só dias futuros
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    // amanhã (mantemos a regra de "dias futuros")
+    this.minDate = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
+
+    // último dia do mês atual
+    this.maxDate = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+  }
 
   ngOnInit(): void {
     this.carregando = true;
@@ -109,7 +120,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
     this.directionsRenderer.setMap(this.map);
 
     this.infoWindow = new google.maps.InfoWindow();
-    this.atualizarMarcadoresViagens(); // caso as viagens já tenham carregado
+    this.atualizarMarcadoresViagens();
   }
 
   // Helper para obter tipo normalizado.
@@ -181,27 +192,23 @@ export class MapaComponent implements AfterViewInit, OnInit {
     if (agendamentos) {
       agendamentos.forEach((a: any) => {
         if (a?.data) {
-          // garantimos só a parte YYYY-MM-DD
           const d = a.data.toString().slice(0, 10);
           datas.push(d);
         }
       });
     }
 
-    // remove duplicados
     return [...new Set(datas)];
   }
 
   carregarViagens(): void {
     this.http.get<any[]>(`${this.baseURL}/viagem`).subscribe({
       next: (res) => {
-        // Normaliza TODAS as viagens para terem sempre v.diasAgendados como array
         this.viagens = (res || []).map(v => {
           const diasAgendados = this.normalizarDatasViagem(v);
           return { ...v, diasAgendados };
         });
 
-        // === Minhas Caronas (oferecidas/procuradas) ===
         this.caronasOferecidas = this.viagens
           .filter(v => Number(v.idUsuario) === this.meuId && this.tipoNormalizado(v) === 'motorista')
           .map(v => ({
@@ -262,72 +269,43 @@ export class MapaComponent implements AfterViewInit, OnInit {
     });
   }
 
-  // =============== LÓGICA DO CALENDÁRIO SIMPLES (INPUT DATE) ===============
+  // =============== LÓGICA DO CALENDÁRIO (PrimeNG) ===============
 
-  private toISO(d: Date): string {
-    return d.toISOString().split('T')[0];
+  // converte Date -> 'YYYY-MM-DD'
+  private toISODate(d: Date): string {
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
   }
 
-  adicionarDataRota(): void {
-    if (!this.dataRota) return;
-
-    // mudou a seleção, precisa confirmar de novo
-    this.datasConfirmadas = false;
-
-    const dataStr = this.dataRota; // formato YYYY-MM-DD
-    const data = new Date(dataStr + 'T00:00:00');
-
-    if (isNaN(data.getTime())) {
-      alert('Data inválida.');
-      this.dataRota = '';
+  confirmarDatasSelecionadas(): void {
+    if (!this.datasCalendar || !this.datasCalendar.length) {
+      this.datasRota = [];
       return;
     }
 
-    // trava só no mês atual (mesmo ano e mês)
-    if (data.getFullYear() !== this.anoAtual || data.getMonth() !== this.mesAtual) {
-      alert('Selecione apenas dias do mês atual.');
-      this.dataRota = '';
-      return;
-    }
-
-    // só datas futuras
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    if (data <= hoje) {
-      alert('Escolha apenas datas futuras.');
-      this.dataRota = '';
-      return;
-    }
 
-    // libera sábado, bloqueia apenas domingo
-    const diaSemana = data.getDay(); // 0 dom, 6 sáb
-    if (diaSemana === 0) {
-      alert('Domingo não é permitido.');
-      this.dataRota = '';
-      return;
-    }
+    const normalizadas = this.datasCalendar
+      // garante só datas futuras
+      .filter(d => d.getTime() > hoje.getTime())
+      // garante sem domingo
+      .filter(d => d.getDay() !== 0)
+      .map(d => this.toISODate(d));
 
-    // adiciona se ainda não tiver e ordena
-    if (!this.datasRota.includes(dataStr)) {
-      this.datasRota.push(dataStr);
-      this.datasRota.sort(); // YYYY-MM-DD => já fica em ordem cronológica
-    }
+    const unicas = Array.from(new Set(normalizadas));
+    unicas.sort((a, b) => a.localeCompare(b));
 
-    // limpa o input
-    this.dataRota = '';
+    this.datasRota = unicas;
   }
 
   removerDataRota(data: string): void {
     this.datasRota = this.datasRota.filter(d => d !== data);
-    this.datasConfirmadas = false;
-  }
 
-  confirmarDatasRota(): void {
-    if (!this.datasRota.length) {
-      alert('Selecione pelo menos um dia antes de confirmar.');
-      return;
-    }
-    this.datasConfirmadas = true;
+    // mantém o calendário coerente com as tags
+    this.datasCalendar = this.datasCalendar.filter(d => this.toISODate(d) !== data);
   }
 
   formatarDataTag(d: string): string {
@@ -336,7 +314,7 @@ export class MapaComponent implements AfterViewInit, OnInit {
     return `${dia}/${mes}`;
   }
 
-  // ===================================================================
+  // =============================================================
 
   tracarRota(): void {
     if (!this.origem || !this.destino || !this.entradaFatec || !this.saidaFatec) {
@@ -344,7 +322,10 @@ export class MapaComponent implements AfterViewInit, OnInit {
       return;
     }
 
+    // garante que datasRota esteja sincronizado com o calendário
+    this.confirmarDatasSelecionadas();
     const datasSelecionadas = this.datasRota;
+
     if (!datasSelecionadas.length) {
       const continuar = confirm(
         'Você não selecionou nenhuma data.\n' +
@@ -361,7 +342,6 @@ export class MapaComponent implements AfterViewInit, OnInit {
       horarioSaida: this.saidaFatec,
       ajudaDeCusto: this.ajudaCusto ? this.ajudaCusto.toString() : '0',
       idUsuario: this.meuId,
-      // ainda mando pro back, ele distribui para viajem_agendada
       datasAgendadas: datasSelecionadas
     };
 

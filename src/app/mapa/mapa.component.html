@@ -65,58 +65,40 @@
       </div>
     </div>
 
-        <!-- Calendário simples -->
+    <!-- Calendário multi-seleção -->
     <div class="calendario-container">
-      <label for="dataRota">Selecione os dias em que esta rota será válida</label>
+      <label>Selecione os dias em que esta rota será válida</label>
 
-      <div class="calendario-row">
-        <input
-          id="dataRota"
-          type="date"
-          [(ngModel)]="dataRota"
-          name="dataRota"
-          [attr.min]="primeiroDiaMesISO"
-          [attr.max]="ultimoDiaMesISO"
-          (change)="adicionarDataRota()"
-        />
-        <small class="mini-calendario-legenda">
-          Clique nos dias do mês para selecionar. Apenas
-          <strong>dias futuros (sem domingos)</strong> são aceitos.
-        </small>
-      </div>
+      <p-calendar
+        [(ngModel)]="datasCalendar"
+        name="datasCalendar"
+        selectionMode="multiple"
+        [inline]="true"
+        [minDate]="minDate"
+        [maxDate]="maxDate"
+        [disabledDays]="disabledDays"
+        dateFormat="dd/mm/yy">
+      </p-calendar>
 
-      <!-- Botão de confirmar (só aparece se já tem pelo menos 1 dia) -->
-      <div
-        class="botao-centro"
-        *ngIf="datasRota.length && !datasConfirmadas"
-      >
-        <button
-          type="button"
-          class="btn-mapa btn-confirmar-dias"
-          (click)="confirmarDatasRota()"
-        >
+      <small class="mini-calendario-legenda">
+        Clique nos dias do mês para selecionar. Apenas
+        <strong>dias futuros (sem domingos)</strong> são aceitos.
+      </small>
+
+      <div class="botao-centro" style="margin-top: 16px;">
+        <button type="button" class="btn-mapa" (click)="confirmarDatasSelecionadas()">
           Confirmar dias selecionados
         </button>
       </div>
 
-      <!-- tags com os dias escolhidos (só depois de confirmar) -->
-      <div
-        class="datas-selecionadas"
-        *ngIf="datasRota.length && datasConfirmadas"
-      >
+      <!-- tags com os dias confirmados -->
+      <div class="datas-selecionadas" *ngIf="datasRota.length">
         <span class="tag-data" *ngFor="let d of datasRota">
           {{ formatarDataTag(d) }}
-          <button
-            type="button"
-            class="tag-remover"
-            (click)="removerDataRota(d)"
-          >
-            ×
-          </button>
+          <button type="button" class="tag-remover" (click)="removerDataRota(d)">×</button>
         </span>
       </div>
     </div>
-    <!-- FIM calendário simples -->
 
     <div class="botao-centro">
       <button type="submit" class="btn-mapa">Cadastrar Rota</button>

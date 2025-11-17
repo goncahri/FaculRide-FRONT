@@ -1,13 +1,13 @@
 /* --------------------------- Reset e Temas Globais --------------------------- */
 
 :root {
-  --background-color: #1e293b; /* Fundo geral */
-  --header-background: #0f172a; /* Fundo do header e footer */
-  --primary-color: #f1f5f9; /* Texto principal */
-  --accent-color: #3b82f6; /* Azul para links e botões */
-  --accent-color-hover: #2563eb; /* Azul mais forte no hover */
+  --background-color: #1e293b;          /* Fundo geral */
+  --header-background: #0f172a;         /* Fundo do header e footer */
+  --primary-color: #f1f5f9;             /* Texto principal */
+  --accent-color: #3b82f6;              /* Azul para links e botões */
+  --accent-color-hover: #2563eb;        /* Azul mais forte no hover */
   --button-background: var(--accent-color);
-  --button-text: #000000; /* Texto do botão Cadastre-se */
+  --button-text: #000000;               /* Texto do botão Cadastre-se */
 }
 
 * {
@@ -37,7 +37,10 @@ main {
 
 /* --------------------------- Header e Footer --------------------------- */
 
-header, footer, .header-container, .footer {
+header,
+footer,
+.header-container,
+.footer {
   background-color: var(--header-background);
   color: var(--primary-color);
 }
@@ -52,23 +55,48 @@ a:hover {
   color: var(--accent-color);
 }
 
-/* Botão Especial (Cadastre-se e Procurar Carona) */
+/* --------------------------- Botões Globais --------------------------- */
 
-button, .btn-cadastro, .home-btn {
+/* Reset leve para TODOS os botões (deixa o visual para o CSS local de cada componente) */
+button {
+  font-family: inherit;
+  font-size: 1rem;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* Botão padrão primário (caso queira usar em outras telas: class="btn-primary") */
+.btn-primary {
+  background-color: var(--accent-color);
+  color: #ffffff;
+  padding: 10px 20px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-color-hover);
+  transform: translateY(-1px);
+}
+
+/* Botão Especial (Cadastre-se, Procurar Carona na home) */
+.btn-cadastro,
+.home-btn {
   background-color: #ffffff;
   color: #000000;
-  border: none;
   padding: 10px 20px;
   font-size: 1em;
   font-weight: bold;
   border-radius: 20px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
 }
 
-button:hover, .btn-cadastro:hover, .home-btn:hover {
+.btn-cadastro:hover,
+.home-btn:hover {
   background-color: #ffffff;
   color: var(--accent-color);
+  transform: translateY(-1px);
 }
 
 /* --------------------------- Estilos Específicos Home --------------------------- */
@@ -141,7 +169,8 @@ button:hover, .btn-cadastro:hover, .home-btn:hover {
     gap: 30px;
   }
 
-  .home-content, .home-image {
+  .home-content,
+  .home-image {
     max-width: 100%;
   }
 
