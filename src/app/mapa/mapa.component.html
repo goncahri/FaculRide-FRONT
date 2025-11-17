@@ -47,7 +47,26 @@
     <!-- NOVO: Mini calendário para agendar os dias da rota -->
     <div class="calendario-container">
       <label>Selecione os dias deste mês em que esta rota será válida</label>
+
+      <div class="calendario-header">
+        <div class="calendario-mes">
+          {{ mesAtualFormatado }}
+        </div>
+      </div>
+
       <div class="mini-calendario">
+        <!-- Cabeçalho dos dias da semana -->
+        <div class="mini-calendario-semana">
+          <span>Seg</span>
+          <span>Ter</span>
+          <span>Qua</span>
+          <span>Qui</span>
+          <span>Sex</span>
+          <span>Sab</span>
+          <span>Dom</span>
+        </div>
+
+        <!-- Dias -->
         <div class="mini-calendario-dias">
           <div
             class="dia-calendario"
@@ -60,6 +79,7 @@
           </div>
         </div>
       </div>
+
       <small class="mini-calendario-legenda">
         Somente <strong>dias úteis futuros</strong> estão habilitados. Você pode marcar
         mais de um dia.
@@ -105,6 +125,17 @@
           <p>Entrada: {{ viagem.horarioEntrada }}</p>
           <p>Saída: {{ viagem.horarioSaida }}</p>
           <p>Ajuda Mensal: R$ {{ viagem.ajudaDeCusto }}</p>
+
+          <!-- NOVO: dias de aula/agendamento (se o back enviar) -->
+          <p *ngIf="viagem.diasAgendados?.length" class="dias-aula">
+            Dias de aula:
+            <span
+              class="chip-dia"
+              *ngFor="let d of viagem.diasAgendados"
+            >
+              {{ d | date:'dd/MM' }}
+            </span>
+          </p>
 
           <button (click)="mostrarRota(viagem.partida, viagem.destino)">Ver rota</button>
           <a (click)="abrirWhatsapp(viagem.usuario?.nome, viagem.idUsuario, viagem.usuario?.telefone)">

@@ -271,6 +271,14 @@ export class MapaComponent implements AfterViewInit, OnInit {
     dia.selecionado = !dia.selecionado;
   }
 
+  get mesAtualFormatado(): string {
+    const agora = new Date();
+    return agora.toLocaleDateString('pt-BR', {
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+
   private getDatasSelecionadasISO(): string[] {
     return this.diasCalendario
       .filter(d => d.selecionado && !d.desabilitado)
