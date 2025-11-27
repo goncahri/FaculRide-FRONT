@@ -16,18 +16,18 @@ export interface PixPagamentoResponse {
 })
 export class ApoioService {
 
-  // Mesma ideia do AuthService, mas apontando para /api/pagamentos
-  private readonly API_URL = 'https://projeto-faculride.onrender.com/api/pagamentos';
+  // base em /api (igual ao app.use("/api", pagamentoRoutes))
+  private readonly API_URL = 'https://projeto-faculride.onrender.com/api';
 
   constructor(private http: HttpClient) {}
 
   doarPix(descricao: string, valor: number): Observable<PixPagamentoResponse> {
     return this.http.post<PixPagamentoResponse>(
-      `${this.API_URL}/pagamento`,   // ✅ /api/pagamentos/pagamento
+      `${this.API_URL}/pagamento`,   
       {
         descricao,
         valor
-        // idUsuario e idViagem podem ser adicionados depois, se quiser
+        // idUsuario e idViagem podem entrar aqui depois, se você quiser
       }
     );
   }
