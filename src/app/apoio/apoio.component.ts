@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApoioService } from '../services/apoio.service';
+import { ApoioService, PixPagamentoResponse } from '../services/apoio.service';
 
 @Component({
   selector: 'app-apoio',
@@ -14,9 +14,15 @@ export class ApoioComponent {
 
   nome = '';
   email = '';
+
   valorSelecionado: number | null = null;
   tipoApoioSelecionado: string | null = null;
   carregando = false;
+
+  // dados do PIX gerado (quando quiser exibir na tela)
+  qrCodeBase64: string | null = null;
+  qrCode: string | null = null;
+  statusPagamento: string | null = null;
 
   planos = [
     { label: 'Apoiador Bronze', valor: 10 },
@@ -26,36 +32,37 @@ export class ApoioComponent {
 
   constructor(private apoioService: ApoioService) {}
 
-  selecionarPlano(plano: { label: string; valor: number }) {
+  selecionarPlano(plano: { label: string; valor: number }): void {
     this.tipoApoioSelecionado = plano.label;
     this.valorSelecionado = plano.valor;
   }
 
-  iniciarDoacao() {
-    if (!this.nome || !this.email) {
-      alert('Preencha seu nome e e-mail para gerar o link de apoio.');
-      return;
-    }
-
+  iniciarDoacao(): void {
     if (!this.valorSelecionado || this.valorSelecionado <= 0) {
       alert('Escolha um valor de doação para apoiar a ideia 💙');
       return;
     }
 
     this.carregando = true;
+    this.qrCodeBase64 = null;
+    this.qrCode = null;
+    this.statusPagamento = null;
 
-    this.apoioService.doar(this.nome, this.email, this.valorSelecionado).subscribe({
-      next: (res) => {
+    const descricao =
+      this.tipoApoioSelecionado
+        ? `Apoio: ${this.tipoApoioSelecionado}`
+        : 'Apoio ao projeto FaculRide';
+
+    this.apoioService.doarPix(descricao, this.valorSelecionado).subscribe({
+      next: (res: PixPagamentoResponse) => {
         this.carregando = false;
+        console.log('PIX gerado:', res);
 
-        if (!res.init_point) {
-          alert('Erro ao gerar o link de doação. Tente novamente.');
-          return;
-        }
-
-        window.location.href = res.init_point;
+        this.qrCodeBase64 = res.qr_code_base64;
+        this.qrCode = res.qr_code;
+        this.statusPagamento = res.status;
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error(err);
         this.carregando = false;
         alert('Erro ao iniciar sua doação. Tente novamente.');
