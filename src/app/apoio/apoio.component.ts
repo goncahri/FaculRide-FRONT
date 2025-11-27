@@ -1,3 +1,4 @@
+// src/app/apoio/apoio.component.ts
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -19,10 +20,14 @@ export class ApoioComponent {
   tipoApoioSelecionado: string | null = null;
   carregando = false;
 
-  // dados do PIX gerado (quando quiser exibir na tela)
+  // dados do PIX gerado
   qrCodeBase64: string | null = null;
   qrCode: string | null = null;
   statusPagamento: string | null = null;
+
+  // controle do modal PIX
+  exibirModalPix = false;
+  copiado = false;
 
   planos = [
     { label: 'Apoiador Bronze', valor: 10 },
@@ -43,10 +48,14 @@ export class ApoioComponent {
       return;
     }
 
+    // (por enquanto nome/email são apenas informativos;
+    // se quiser podemos mandar depois para o backend)
     this.carregando = true;
     this.qrCodeBase64 = null;
     this.qrCode = null;
     this.statusPagamento = null;
+    this.exibirModalPix = false;
+    this.copiado = false;
 
     const descricao =
       this.tipoApoioSelecionado
@@ -61,6 +70,9 @@ export class ApoioComponent {
         this.qrCodeBase64 = res.qr_code_base64;
         this.qrCode = res.qr_code;
         this.statusPagamento = res.status;
+
+        // abre modal com o QR Code
+        this.exibirModalPix = true;
       },
       error: (err: any) => {
         console.error(err);
@@ -68,5 +80,26 @@ export class ApoioComponent {
         alert('Erro ao iniciar sua doação. Tente novamente.');
       }
     });
+  }
+
+  fecharModalPix(): void {
+    this.exibirModalPix = false;
+    this.copiado = false;
+  }
+
+  copiarCodigoPix(): void {
+    if (!this.qrCode) return;
+
+    if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(this.qrCode)
+        .then(() => {
+          this.copiado = true;
+          setTimeout(() => (this.copiado = false), 2500);
+        })
+        .catch(err => console.error('Erro ao copiar código PIX:', err));
+    } else {
+      // fallback simples
+      alert('Copie o código manualmente na caixa de texto.');
+    }
   }
 }

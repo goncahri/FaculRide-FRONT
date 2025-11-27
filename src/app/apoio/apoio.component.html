@@ -79,3 +79,47 @@
     </small>
   </form>
 </section>
+
+<!-- ================= MODAL PIX ================= -->
+<div class="modal-pix-backdrop" *ngIf="exibirModalPix">
+  <div class="modal-pix-card">
+    <button class="modal-fechar" type="button" (click)="fecharModalPix()">×</button>
+
+    <h3 class="modal-titulo">PIX gerado com sucesso 🎉</h3>
+
+    <p class="modal-subtitulo" *ngIf="statusPagamento">
+      Status do pagamento: <strong>{{ statusPagamento }}</strong>
+    </p>
+
+    <!-- QR CODE -->
+    <div class="modal-qr-wrapper" *ngIf="qrCodeBase64">
+      <img
+        [src]="'data:image/png;base64,' + qrCodeBase64"
+        alt="QR Code PIX"
+        class="qr-image"
+      />
+    </div>
+
+    <!-- Copia e cola -->
+    <div class="modal-copia-cola" *ngIf="qrCode">
+      <label>Código PIX (copia e cola):</label>
+      <textarea
+        readonly
+        class="pix-textarea"
+      >{{ qrCode }}</textarea>
+
+      <button
+        type="button"
+        class="btn btn-secondary btn-copiar"
+        (click)="copiarCodigoPix()"
+      >
+        {{ copiado ? 'Copiado! ✅' : 'Copiar código PIX' }}
+      </button>
+    </div>
+
+    <p class="modal-info-extra">
+      Abra o app do seu banco, escolha pagar via PIX e use o QR Code
+      ou o código de copia e cola acima.
+    </p>
+  </div>
+</div>
