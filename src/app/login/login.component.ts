@@ -21,6 +21,8 @@ export class LoginComponent {
   loginAttempts: number = 0;
   showRecoverPasswordSection: boolean = false;
 
+  carregando: boolean = false; // 🔵 NOVO
+
   constructor(
     private authService: AuthService, 
     private router: Router
@@ -32,6 +34,8 @@ export class LoginComponent {
       return;
     }
 
+    this.carregando = true; // 🔵 ATIVA SPINNER
+
     const loginData = {
       email: this.email,
       senha: this.password,
@@ -39,12 +43,14 @@ export class LoginComponent {
 
     this.authService.login(loginData.email, loginData.senha).subscribe({
       next: (res: any) => {
-        // AuthService já salva token, inicializa socket e notificações
+        this.carregando = false; // 🔵 DESATIVA SPINNER
         alert('✅ Login efetuado com sucesso!');
         this.router.navigate(['/usuario']);
       },
       error: (err) => {
+        this.carregando = false; // 🔵 DESATIVA SPINNER
         console.error('Erro no login:', err);
+
         this.loginAttempts++;
         this.errorMsg = err?.error?.erro || 'E-mail ou senha inválidos.';
         alert(this.errorMsg);

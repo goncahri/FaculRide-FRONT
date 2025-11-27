@@ -25,11 +25,25 @@
         required
       />
 
-      <button type="submit" class="btn-primary">
-        <img src="assets/logo1.png" alt="FaculRide" class="btn-icon">
-        Entrar
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="carregando || formLogin.invalid"
+      >
+        <!-- Quando NÃO está carregando -->
+        <ng-container *ngIf="!carregando; else loadingTpl">
+          <img src="assets/logo1.png" alt="FaculRide" class="btn-icon" />
+          Entrar
+        </ng-container>
+
+        <!-- Quando ESTÁ carregando -->
+        <ng-template #loadingTpl>
+          <div class="loading-wrapper">
+            <span class="spinner"></span>
+            Carregando...
+          </div>
+        </ng-template>
       </button>
-      
     </form>
 
     <!-- Link para recuperar senha -->
@@ -61,12 +75,12 @@
 
     <!-- Login Social -->
     <button type="button" class="btn-google">
-      <img src="assets/google.png" alt="Google" class="btn-icon">
+      <img src="assets/google.png" alt="Google" class="btn-icon" />
       Continuar com Google
     </button>
 
     <button type="button" class="btn-facebook">
-      <img src="assets/facebook.png" alt="Facebook" class="btn-icon">
+      <img src="assets/facebook.png" alt="Facebook" class="btn-icon" />
       Continuar com Facebook
     </button>
 

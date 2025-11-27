@@ -65,6 +65,44 @@ input {
   color: #ffffff;
 }
 
+/* estado desabilitado (quando está carregando) */
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  /* mantém as cores para não “piscar” quando desabilitar */
+  background-color: white;
+  color: #0f172a;
+}
+
+/* wrapper do texto + spinner dentro do botão */
+.loading-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* bolinha girando */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #0f172a;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+/* animação do spinner */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .recover-password {
   background: none;
   border: none;
